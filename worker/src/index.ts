@@ -8,6 +8,7 @@ export default {
   // 处理HTTP请求
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    const pathname = url.pathname;
     
     try {
       // 自动初始化数据库（如果需要）
@@ -21,6 +22,11 @@ export default {
         }), {
           headers: { 'Content-Type': 'application/json' }
         });
+      }
+
+      // 非 API 请求交给静态资源处理（前端页面）
+      if (!pathname.startsWith('/api/')) {
+        return env.ASSETS.fetch(request);
       }
       
       // 处理API请求

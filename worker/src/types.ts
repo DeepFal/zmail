@@ -3,6 +3,7 @@ import { D1Database } from '@cloudflare/workers-types';
 // 环境变量类型
 export interface Env {
   DB: D1Database;
+  ASSETS: Fetcher;
   VITE_EMAIL_DOMAIN?: string;
 }
 

@@ -45,7 +45,7 @@ app.use('/*', cors({
 }));
 
 // 健康检查端点
-app.get('/', (c) => {
+app.get('/api/health', (c) => {
   return c.json({ status: 'ok', message: '临时邮箱系统API正常运行' });
 });
 
