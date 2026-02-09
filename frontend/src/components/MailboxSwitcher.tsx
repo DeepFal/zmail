@@ -6,13 +6,11 @@ import { MailboxContext } from '../contexts/MailboxContext'; // feat: 导入 Mai
 interface MailboxSwitcherProps {
   currentMailbox: Mailbox;
   onSwitchMailbox: (mailbox: Mailbox) => void;
-  domain: string;
 }
 
 const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
   currentMailbox,
-  onSwitchMailbox,
-  domain
+  onSwitchMailbox
 }) => {
   const { t } = useTranslation();
   // feat: 从 context 中获取全局通知函数
@@ -204,7 +202,7 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
                     m.address === currentMailbox.address ? 'bg-primary/10 text-primary font-medium' : ''
                   }`}
                 >
-                  {m.address}@{domain}
+                  {m.address}
                 </button>
                 {m.address !== currentMailbox.address && (
                   <button

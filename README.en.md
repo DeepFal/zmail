@@ -70,7 +70,7 @@ We provide two deployment methods, you can choose according to your needs:
 #### Option 1: One-Click Deployment (Recommended for Beginners)
 
 <div align="center">
-  <a href="http://deploy.workers.cloudflare.com/?url=https://github.com/zaunist/zmail" target="_blank">
+  <a href="http://deploy.workers.cloudflare.com/?url=https://github.com/DeepFal/zmail" target="_blank">
     <img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare" />
   </a>
 </div>

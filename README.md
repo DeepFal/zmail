@@ -65,7 +65,7 @@ ZMAIL 现在采用全新的一体化部署方式，前端和后端整合为一�
 #### 方式一：一键部署（推荐新手）
 
 <div align="center">
-  <a href="http://deploy.workers.cloudflare.com/?url=https://github.com/zaunist/zmail" target="_blank">
+  <a href="http://deploy.workers.cloudflare.com/?url=https://github.com/DeepFal/zmail" target="_blank">
     <img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare" />
   </a>
 </div>

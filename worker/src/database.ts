@@ -223,37 +223,6 @@ export async function cleanupReadMails(db: D1Database): Promise<number> {
 }
 
 /**
- * 清理指定邮件的所有附件
- * @param db 数据库实例
- * @param emailId 邮件ID
- */
-async function cleanupAttachments(db: D1Database, emailId: string): Promise<void> {
-  // [refactor] 利用 ON DELETE CASCADE，此函数在删除邮件时不再需要手动调用。
-  // 但保留此函数以备其他需要单独清理附件的场景。
-  try {
-    // 获取邮件的所有附件ID
-    const attachmentsResult = await db.prepare(`SELECT id FROM attachments WHERE email_id = ?`).bind(emailId).all<{ id: string }>();
-    
-    if (attachmentsResult.results && attachmentsResult.results.length > 0) {
-      const attachmentIds = attachmentsResult.results.map(row => row.id);
-      const placeholders = attachmentIds.map(() => '?').join(',');
-
-      console.log(`邮件 ${emailId} 有 ${attachmentIds.length} 个附件需要清理`);
-      
-      // 批量删除所有分块
-      await db.prepare(`DELETE FROM attachment_chunks WHERE attachment_id IN (${placeholders})`).bind(...attachmentIds).run();
-      console.log(`已清理附件的所有分块`);
-      
-      // 批量删除所有附件记录
-      await db.prepare(`DELETE FROM attachments WHERE id IN (${placeholders})`).bind(...attachmentIds).run();
-      console.log(`已清理邮件 ${emailId} 的所有附件`);
-    }
-  } catch (error) {
-    console.error(`清理邮件 ${emailId} 的附件时出错:`, error);
-  }
-}
-
-/**
  * 保存邮件
  * @param db 数据库实例
  * @param params 参数

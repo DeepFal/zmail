@@ -1,14 +1,11 @@
-import React, { useContext, useState } from 'react'; // 导入 useState
+import React, { useContext, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import Header from './Header';
-import Footer from './Footer';
 import SEO from './SEO';
 import { MailboxContext } from '../contexts/MailboxContext';
-import InfoModal from './InfoModal'; // 导入弹窗组件
+import InfoModal from './InfoModal';
 
 const Layout: React.FC = () => {
-  const { t } = useTranslation();
   const { mailbox, setMailbox, isLoading } = useContext(MailboxContext);
   const location = useLocation();
   
@@ -30,8 +27,6 @@ const Layout: React.FC = () => {
   
   // 根据当前路径设置不同的SEO信息
   const getSEOProps = () => {
-    const path = location.pathname;
-    
     // 默认SEO属性
     const defaultProps = {
       title: 'ZMAIL-24小时匿名邮箱',
@@ -52,18 +47,22 @@ const Layout: React.FC = () => {
   };
   
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-screen flex-col bg-slate-50 dark:bg-neutral-950 transition-colors duration-300">
       <SEO {...getSEOProps()} />
-      <Header 
-        mailbox={mailbox} 
-        onMailboxChange={setMailbox} 
-        isLoading={isLoading}
-      />
-      <main className="flex-1 py-6">
-        <Outlet />
+      <div className="flex-none z-10 shadow-sm relative">
+        <Header 
+          mailbox={mailbox} 
+          onMailboxChange={setMailbox} 
+          isLoading={isLoading}
+          onShowInfo={handleShowInfo}
+        />
+      </div>
+      <main className="flex-1 overflow-y-auto scroll-smooth">
+        <div className="h-full w-full max-w-7xl mx-auto">
+          <Outlet />
+        </div>
       </main>
-      {/* 传递 onShowInfo 函数给 Footer 组件 */}
-      <Footer onShowInfo={handleShowInfo} />
+      
       {/* 渲染弹窗组件 */}
       <InfoModal 
         isOpen={infoModal.isOpen} 

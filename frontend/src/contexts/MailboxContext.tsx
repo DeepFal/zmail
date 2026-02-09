@@ -8,7 +8,7 @@ import {
   deleteMailbox as apiDeleteMailbox
 } from '../utils/api';
 import { useTranslation } from 'react-i18next';
-import { DEFAULT_AUTO_REFRESH, AUTO_REFRESH_INTERVAL } from '../config';
+import { DEFAULT_AUTO_REFRESH, AUTO_REFRESH_INTERVAL, getDefaultEmailDomain } from '../config';
 
 // 邮件详情缓存接口
 interface EmailCache {
@@ -149,7 +149,8 @@ export const MailboxProvider: React.FC<MailboxProviderProps> = ({ children }) =>
       setErrorMessage(null);
       setSuccessMessage(null);
       setIsLoading(true);
-      const result = await createRandomMailbox();
+      const defaultDomain = await getDefaultEmailDomain();
+      const result = await createRandomMailbox(24, defaultDomain);
       if (result.success && result.mailbox) {
         setMailbox(result.mailbox);
         saveMailboxToLocalStorage(result.mailbox);
@@ -370,16 +371,33 @@ export const MailboxProvider: React.FC<MailboxProviderProps> = ({ children }) =>
         showErrorMessage,
       }}
     >
-      {/* [feat] 全局通知组件 */}
+      {/* [feat] 高级感全局通知 (Dynamic Island Style - Top Position) */}
       {(errorMessage || successMessage) && (
-        <div
-          className={`fixed bottom-4 right-4 z-50 p-3 rounded-md shadow-lg max-w-md ${
-            errorMessage
-              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-              : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-          }`}
-        >
-          {errorMessage || successMessage}
+        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 flex flex-col items-center pointer-events-none">
+          <div
+            className={`
+              flex items-center gap-3 px-6 py-3 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] 
+              backdrop-blur-xl border border-white/20 dark:border-white/10
+              animate-in slide-in-from-top-4 fade-in zoom-in-95 duration-300 ease-out
+              ${errorMessage 
+                ? 'bg-red-50/95 text-red-600 dark:bg-red-950/90 dark:text-red-200' 
+                : 'bg-white/95 text-zinc-800 dark:bg-zinc-900/95 dark:text-zinc-100' // 更纯净的背景色
+              }
+            `}
+          >
+            {errorMessage ? (
+               <div className="flex items-center justify-center w-5 h-5 rounded-full bg-red-500/20 text-red-500">
+                 <i className="fas fa-exclamation text-xs"></i>
+               </div>
+            ) : (
+               <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20 text-green-500">
+                 <i className="fas fa-check text-xs"></i>
+               </div>
+            )}
+            <span className="text-sm font-medium tracking-wide pr-1">
+              {errorMessage || successMessage}
+            </span>
+          </div>
         </div>
       )}
       {children}

@@ -23,11 +23,24 @@ export async function handleEmail(message: any, env: Env): Promise<void> {
       attachmentsCount: email.attachments?.length || 0
     });
 
-    // 提取邮箱地址部分（从email.to获取 ）
-    const mailboxAddress = email.to[0].address.split('@')[0];
-    
-    // 查找对应的邮箱
-    const mailbox = await getMailbox(env.DB, mailboxAddress);
+    const recipientAddresses = (email.to || [])
+      .map((recipient) => (recipient?.address || '').trim().toLowerCase())
+      .filter((address) => address.length > 0);
+
+    if (recipientAddresses.length === 0) {
+      throw new Error('收件地址为空');
+    }
+
+    let mailbox = null;
+    let mailboxAddress = '';
+    for (const recipientAddress of recipientAddresses) {
+      const matchedMailbox = await getMailbox(env.DB, recipientAddress);
+      if (matchedMailbox) {
+        mailbox = matchedMailbox;
+        mailboxAddress = recipientAddress;
+        break;
+      }
+    }
     
     if (!mailbox) {
       console.log('邮箱不存在');

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createRandomMailbox, createCustomMailbox } from '../utils/api';
 import MailboxSwitcher from './MailboxSwitcher';
@@ -12,6 +12,86 @@ interface HeaderMailboxProps {
   isLoading: boolean;
 }
 
+// Internal Component: Modern Custom Domain Selector
+interface DomainSelectorProps {
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  className?: string;
+}
+
+const DomainSelector: React.FC<DomainSelectorProps> = ({ value, options, onChange, disabled, className = "" }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const handleSelect = (option: string) => {
+    onChange(option);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`
+          flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-colors outline-none select-none
+          ${isOpen ? 'bg-muted/50 text-foreground' : 'text-muted-foreground hover:text-foreground'}
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `}
+      >
+        <span className="font-mono text-sm font-medium">{value}</span>
+        <i className={`fas fa-chevron-down text-[10px] opacity-50 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}></i>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full right-0 mt-2 w-48 z-50 origin-top-right">
+          <div className="bg-popover/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-border/50 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-1 animate-in fade-in zoom-in-95 duration-200">
+            <div className="max-h-[240px] overflow-y-auto py-1 custom-scrollbar">
+              {options.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => handleSelect(option)}
+                  className={`
+                    w-full text-left px-3 py-2 text-sm rounded-lg transition-colors font-mono
+                    ${option === value 
+                      ? 'bg-primary/10 text-primary font-medium' 
+                      : 'text-foreground/80 hover:bg-muted hover:text-foreground'
+                    }
+                  `}
+                >
+                  <div className="flex justify-between items-center">
+                    <span>{option}</span>
+                    {option === value && <i className="fas fa-check text-xs"></i>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const HeaderMailbox: React.FC<HeaderMailboxProps> = ({ 
   mailbox, 
   onMailboxChange,
@@ -20,7 +100,6 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
   isLoading
 }) => {
   const { t } = useTranslation();
-  // feat: 统一使用全局通知
   const { showSuccessMessage, showErrorMessage } = useContext(MailboxContext);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [customAddress, setCustomAddress] = useState('');
@@ -29,46 +108,36 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
   const [customAddressError, setCustomAddressError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (mailbox?.address?.includes('@')) {
+      setSelectedDomain(mailbox.address.split('@')[1]);
+      return;
+    }
     setSelectedDomain(domain);
-  }, [domain]);
+  }, [domain, mailbox]);
   
   if (!mailbox || isLoading) return null;
   
-  // 复制邮箱地址到剪贴板
   const copyToClipboard = () => {
-    const fullAddress = mailbox.address.includes('@') ? mailbox.address : `${mailbox.address}@${selectedDomain}`;
-    navigator.clipboard.writeText(fullAddress)
-      .then(() => {
-        // feat: 使用全局通知替换 Tooltip
-        showSuccessMessage(t('mailbox.copySuccess'));
-      })
-      .catch(() => {
-        // fix: 使用全局通知函数显示复制失败
-        showErrorMessage(t('mailbox.copyFailed'));
-      });
+    navigator.clipboard.writeText(mailbox.address)
+      .then(() => showSuccessMessage(t('mailbox.copySuccess')))
+      .catch(() => showErrorMessage(t('mailbox.copyFailed')));
   };
   
-  // 更换随机邮箱
   const handleRefreshMailbox = async () => {
     setIsActionLoading(true);
-    const result = await createRandomMailbox();
+    const result = await createRandomMailbox(24, selectedDomain);
     setIsActionLoading(false);
     
     if (result.success && result.mailbox) {
       onMailboxChange(result.mailbox);
-      // feat: 使用全局通知替换 Tooltip
       showSuccessMessage(t('mailbox.refreshSuccess'));
     } else {
-      // fix: 使用全局通知函数显示刷新失败
       showErrorMessage(t('mailbox.refreshFailed'));
     }
   };
   
-  // 创建自定义邮箱
   const handleCreateCustom = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // 清除之前的错误信息
     setCustomAddressError(null);
     
     if (!customAddress.trim()) {
@@ -77,249 +146,162 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
     }
     
     setIsActionLoading(true);
-    const result = await createCustomMailbox(customAddress);
+    const result = await createCustomMailbox(customAddress, selectedDomain);
     setIsActionLoading(false);
     
     if (result.success && result.mailbox) {
       onMailboxChange(result.mailbox);
-      // fix: 使用全局通知函数显示成功
       showSuccessMessage(t('mailbox.createSuccess'));
-      
-      // 成功后延迟关闭自定义输入框
       setTimeout(() => {
         setIsCustomMode(false);
         setCustomAddress('');
-      }, 1500);
-
+      }, 500);
     } else {
-      const isAddressExistsError = result.error === 'Address already exists' || String(result.error).includes('已存在');
+      const isAddressExistsError = String(result.error).includes('已存在') || String(result.error).includes('Address already exists');
       if (isAddressExistsError) {
-        // fix: 对于表单内校验错误，保留局部状态提示
         setCustomAddressError(t('mailbox.addressExists'));
       } else {
-        // fix: 对于通用创建失败，使用全局通知
         showErrorMessage(t('mailbox.createFailed'));
       }
     }
   };
   
-  // 取消自定义模式
   const handleCancelCustom = () => {
     setIsCustomMode(false);
     setCustomAddress('');
     setCustomAddressError(null);
   };
   
-  // 移动设备上的邮箱地址显示
-  const renderMobileAddress = () => {
-    const fullAddress = mailbox.address.includes('@') ? mailbox.address : `${mailbox.address}@${selectedDomain}`;
-    const [username, domainPart] = fullAddress.split('@');
+  const handleDomainChange = async (newDomain: string) => {
+    setSelectedDomain(newDomain);
     
-    // 如果用户名太长，截断显示
-    const displayUsername = username.length > 10 ? `${username.substring(0, 8)}...` : username;
-    
-    return (
-      <code className="bg-muted px-2 py-1 rounded text-xs font-medium truncate max-w-[120px]">
-        {displayUsername}@{domainPart}
-      </code>
-    );
+    // 如果不在自定义模式下，切换域名自动刷新邮箱
+    if (!isCustomMode) {
+      setIsActionLoading(true);
+      const result = await createRandomMailbox(24, newDomain);
+      setIsActionLoading(false);
+
+      if (result.success && result.mailbox) {
+        onMailboxChange(result.mailbox);
+        showSuccessMessage(t('mailbox.refreshSuccess'));
+      } else {
+        showErrorMessage(t('mailbox.refreshFailed'));
+      }
+    }
   };
-  
-  // 切换域名
-  const handleDomainChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedDomain(e.target.value);
-    // [fix] 切换域名后自动更换邮箱
-    await handleRefreshMailbox();
-  };
-  
-  // 按钮基础样式
-  const buttonBaseClass = "flex items-center justify-center rounded-md transition-all duration-200";
-  const copyButtonClass = `${buttonBaseClass} hover:bg-primary/20 hover:text-primary hover:scale-110 mx-1`;
-  const refreshButtonClass = `${buttonBaseClass} bg-muted hover:bg-primary/20 hover:text-primary hover:scale-110 mr-1`;
-  const customizeButtonClass = `${buttonBaseClass} bg-primary text-primary-foreground hover:bg-primary/80 hover:scale-110`;
-  
+
+  // Common button styles
+  const actionBtnClass = "w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-background/80 hover:text-foreground hover:shadow-sm transition-all duration-200 active:scale-90 active:bg-background";
+
   return (
-    <div className="flex items-center">
+    <div className="flex items-center perspective-1000">
       {isCustomMode ? (
-        <form onSubmit={handleCreateCustom} className="flex flex-col space-y-2">
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center">
-              <input
-                type="text"
-                value={customAddress}
-                onChange={(e) => {
-                  setCustomAddress(e.target.value);
-                  if (customAddressError) setCustomAddressError(null);
-                }}
-                className={`w-32 md:w-40 px-2 py-1 text-sm border rounded-l-md focus:outline-none focus:ring-1 focus:ring-primary ${
-                  customAddressError ? 'border-red-500' : ''
-                }`}
-                placeholder={t('mailbox.customAddressPlaceholder')}
-                disabled={isActionLoading}
-                autoFocus
-              />
-              <span className="flex items-center px-2 py-1 text-sm border-y border-r rounded-r-md bg-muted">
-                @
-                {/* [fix]: 为select包裹一个relative容器，用于绝对定位自定义箭头 */}
-                <div className="relative">
-                  <select 
-                    value={selectedDomain}
-                    onChange={handleDomainChange}
-                    // [fix]: 添加 appearance-none 移除原生样式，并增加padding-right为箭头留出空间
-                    className="appearance-none bg-transparent border-none focus:outline-none pl-1 pr-5"
-                  >
-                    {domains.map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                  {/* [fix]: 添加自定义的下拉箭头图标 */}
-                  <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none"></i>
-                </div>
-              </span>
-            </div>
-            <button
+        <form 
+          onSubmit={handleCreateCustom} 
+          className="flex items-center bg-muted/50 rounded-full border border-primary/20 ring-2 ring-primary/10 pl-1 pr-1 py-0.5 animate-in fade-in zoom-in-95 duration-200 origin-left"
+        >
+          <div className="flex items-center pl-3 pr-1">
+            <input
+              type="text"
+              value={customAddress}
+              onChange={(e) => {
+                setCustomAddress(e.target.value);
+                if (customAddressError) setCustomAddressError(null);
+              }}
+              className={`w-28 sm:w-32 bg-transparent text-sm font-medium focus:outline-none placeholder:text-muted-foreground/50 transition-colors ${
+                customAddressError ? 'text-red-500 placeholder:text-red-300' : 'text-foreground'
+              }`}
+              placeholder={t('mailbox.customAddressPlaceholder')}
+              disabled={isActionLoading}
+              autoFocus
+            />
+            <span className="text-muted-foreground text-sm font-mono mx-0.5">@</span>
+            
+            {/* Custom Domain Selector */}
+            <DomainSelector 
+              value={selectedDomain}
+              options={domains}
+              onChange={setSelectedDomain} // 自定义模式下切换域名不刷新邮箱
+              disabled={isActionLoading}
+            />
+          </div>
+          
+          <div className="flex items-center gap-1 bg-background/50 rounded-full p-0.5 ml-1">
+             <button
               type="button"
               onClick={handleCancelCustom}
-              className="px-2 py-1 text-sm rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 active:scale-90"
               disabled={isActionLoading}
             >
-              {t('common.cancel')}
+              <i className="fas fa-times text-xs"></i>
             </button>
             <button
               type="submit"
-              className="px-2 py-1 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all duration-200 active:scale-90"
               disabled={isActionLoading}
             >
-              {isActionLoading ? t('common.loading') : t('common.create')}
+              {isActionLoading ? <i className="fas fa-circle-notch fa-spin text-xs"></i> : <i className="fas fa-check text-xs"></i>}
             </button>
           </div>
-          
-          {/* 错误信息显示 */}
-          {customAddressError && (
-            <div className="text-red-500 text-xs px-1">
-              {customAddressError}
-            </div>
-          )}
-          
         </form>
       ) : (
-        <>
-          <div className="flex items-center">
-            {/* 电脑端邮箱地址显示 */}
-            <div className="hidden sm:flex items-center">
-              <code className="bg-muted px-2 py-1 rounded text-sm font-medium flex items-center">
-                {mailbox.address}@
-                {/* [fix]: 为select包裹一个relative容器，用于绝对定位自定义箭头 */}
-                <div className="relative">
-                  <select 
-                    value={selectedDomain}
-                    onChange={handleDomainChange}
-                    // [fix]: 添加 appearance-none 移除原生样式，并增加padding-right为箭头留出空间
-                    className="appearance-none bg-transparent border-none focus:outline-none pl-1 pr-4 font-medium"
-                  >
-                    {domains.map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                  {/* [fix]: 添加自定义的下拉箭头图标 */}
-                  <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none"></i>
-                </div>
-              </code>
+        <div className="flex items-center bg-slate-100/80 dark:bg-neutral-800/60 rounded-full border border-border/50 shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 hover:border-border/80 transition-all duration-300 ease-out backdrop-blur-sm">
+           {/* Address Display */}
+           <div className="flex items-center pl-4 pr-1.5 py-1.5 border-r border-border/40 gap-1">
+              <span className="font-mono text-sm font-medium tracking-tight text-foreground select-all cursor-text">
+                {mailbox.address.split('@')[0]}
+              </span>
+              <span className="text-muted-foreground/60 text-sm">@</span>
               
-              {/* 添加邮箱切换组件 */}
-              <MailboxSwitcher 
-                currentMailbox={mailbox}
-                onSwitchMailbox={onMailboxChange}
-                domain={selectedDomain}
-              />
-              
-              <div className="relative">
-                <button 
-                  onClick={copyToClipboard}
-                  className={`w-8 h-8 ${copyButtonClass}`}
-                  aria-label={t('common.copy')}
-                  title={t('common.copy')}
-                >
-                  <i className="fas fa-copy text-sm"></i>
-                </button>
-              </div>
-              
-              <div className="relative">
-                <button
-                  onClick={handleRefreshMailbox}
-                  className={`w-8 h-8 ${refreshButtonClass}`}
-                  disabled={isActionLoading}
-                  title={t('mailbox.refresh')}
-                >
-                  <i className="fas fa-sync-alt text-sm"></i>
-                </button>
-              </div>
-              
-              <button
-                onClick={() => setIsCustomMode(true)}
-                className={`w-8 h-8 ${customizeButtonClass}`}
+              {/* Custom Domain Selector */}
+              <DomainSelector 
+                value={selectedDomain}
+                options={domains}
+                onChange={handleDomainChange}
                 disabled={isActionLoading}
-                title={t('mailbox.customize')}
+              />
+           </div>
+
+           {/* Command Actions */}
+           <div className="flex items-center gap-0.5 px-1.5">
+              <button 
+                onClick={copyToClipboard}
+                className={actionBtnClass}
+                title={t('common.copy')}
               >
-                <i className="fas fa-edit text-sm"></i>
+                <i className="fas fa-copy text-xs transform group-hover:scale-110 transition-transform"></i>
               </button>
-            </div>
-            
-          </div>
-          
-          {/* 移动版显示 */}
-          <div className="flex sm:hidden items-center flex-col">
-            {/* 邮箱地址和操作按钮 */}
-            <div className="flex items-center">
-              {renderMobileAddress()}
-              
-              {/* 添加移动版邮箱切换组件 */}
-              <div className="transform scale-75 origin-right -mr-1">
-                <MailboxSwitcher 
+
+              <button
+                onClick={handleRefreshMailbox}
+                className={actionBtnClass}
+                disabled={isActionLoading}
+                title={t('mailbox.refresh')}
+              >
+                 <i className={`fas fa-sync-alt text-xs ${isActionLoading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`}></i>
+              </button>
+
+              {/* Mailbox Switcher Integration - Wrapper to enforce style matching */}
+              <div className="flex items-center justify-center">
+                 <MailboxSwitcher 
                   currentMailbox={mailbox}
                   onSwitchMailbox={onMailboxChange}
-                  domain={selectedDomain}
                 />
               </div>
-              
-              <div className="relative">
-                <button 
-                  onClick={copyToClipboard}
-                  className={`w-6 h-6 ${copyButtonClass}`}
-                  aria-label={t('common.copy')}
-                  title={t('common.copy')}
-                >
-                  <i className="fas fa-copy text-xs"></i>
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex items-center">
-              <div className="relative">
-                <button
-                  onClick={handleRefreshMailbox}
-                  className={`w-6 h-6 ${refreshButtonClass}`}
-                  disabled={isActionLoading}
-                  title={t('mailbox.refresh')}
-                >
-                  <i className="fas fa-sync-alt text-xs"></i>
-                </button>
-              </div>
-      
+
               <button
                 onClick={() => setIsCustomMode(true)}
-                className={`w-6 h-6 ${customizeButtonClass}`}
+                className={`${actionBtnClass} text-primary hover:bg-primary hover:text-primary-foreground`}
                 disabled={isActionLoading}
                 title={t('mailbox.customize')}
               >
-                <i className="fas fa-edit text-xs"></i>
+                <i className="fas fa-pen text-xs"></i>
               </button>
-            </div>
-          </div>
-        </>
+           </div>
+        </div>
       )}
     </div>
   );
 };
 
-export default HeaderMailbox; 
+export default HeaderMailbox;

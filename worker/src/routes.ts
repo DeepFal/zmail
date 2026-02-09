@@ -11,7 +11,27 @@ import {
   getAttachments,
   getAttachment
 } from './database';
-import { generateRandomAddress, } from './utils';
+import { generateRandomAddress, isValidEmailAddress } from './utils';
+
+function getConfiguredDomains(env: Env): string[] {
+  const emailDomains = env.VITE_EMAIL_DOMAIN || '';
+  return emailDomains
+    .split(',')
+    .map((domain: string) => domain.trim().toLowerCase())
+    .filter((domain: string) => domain);
+}
+
+function normalizeAddress(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function getAddressParam(rawValue: string): string {
+  try {
+    return normalizeAddress(decodeURIComponent(rawValue));
+  } catch {
+    return normalizeAddress(rawValue);
+  }
+}
 
 // 创建 Hono 应用
 const app = new Hono<{ Bindings: Env }>();
@@ -32,8 +52,7 @@ app.get('/', (c) => {
 // 获取系统配置
 app.get('/api/config', (c) => {
   try {
-    const emailDomains = c.env.VITE_EMAIL_DOMAIN || '';
-    const domains = emailDomains.split(',').map((domain: string) => domain.trim()).filter((domain: string) => domain);
+    const domains = getConfiguredDomains(c.env);
     
     return c.json({ 
       success: true, 
@@ -55,11 +74,15 @@ app.get('/api/config', (c) => {
 // 创建邮箱
 app.post('/api/mailboxes', async (c) => {
   try {
-    const body = await c.req.json();
+    const body = await c.req.json() as { address?: string; domain?: string };
     
     // 验证参数
     if (body.address && typeof body.address !== 'string') {
       return c.json({ success: false, error: '无效的邮箱地址' }, 400);
+    }
+
+    if (body.domain && typeof body.domain !== 'string') {
+      return c.json({ success: false, error: '无效的域名' }, 400);
     }
     
     const expiresInHours = 24; // 固定24小时有效期
@@ -67,8 +90,40 @@ app.post('/api/mailboxes', async (c) => {
     // 获取客户端IP
     const ip = c.req.header('CF-Connecting-IP') || 'unknown';
     
-    // 生成或使用提供的地址
-    const address = body.address || generateRandomAddress();
+    const configuredDomains = getConfiguredDomains(c.env);
+    const requestedDomain = body.domain ? body.domain.trim().toLowerCase() : '';
+    const hasProvidedAddress = typeof body.address === 'string' && body.address.trim().length > 0;
+
+    if (configuredDomains.length === 0) {
+      return c.json({ success: false, error: '未配置可用邮箱域名' }, 500);
+    }
+
+    if (requestedDomain && !configuredDomains.includes(requestedDomain)) {
+      return c.json({ success: false, error: '所选域名不可用' }, 400);
+    }
+
+    const targetDomain = requestedDomain || configuredDomains[0];
+
+    // 生成或使用提供的地址（统一保存完整地址）
+    let address = '';
+    if (hasProvidedAddress) {
+      const normalizedInput = normalizeAddress(body.address!);
+      if (normalizedInput.includes('@')) {
+        const fullDomain = normalizedInput.split('@')[1] || '';
+        if (!configuredDomains.includes(fullDomain)) {
+          return c.json({ success: false, error: '邮箱域名不在允许列表中' }, 400);
+        }
+        address = normalizedInput;
+      } else {
+        address = `${normalizedInput}@${targetDomain}`;
+      }
+    } else {
+      address = `${generateRandomAddress()}@${targetDomain}`;
+    }
+
+    if (!isValidEmailAddress(address)) {
+      return c.json({ success: false, error: '无效的邮箱地址' }, 400);
+    }
     
     // 检查邮箱是否已存在
     const existingMailbox = await getMailbox(c.env.DB, address);
@@ -97,7 +152,7 @@ app.post('/api/mailboxes', async (c) => {
 // 获取邮箱信息
 app.get('/api/mailboxes/:address', async (c) => {
   try {
-    const address = c.req.param('address');
+    const address = getAddressParam(c.req.param('address'));
     const mailbox = await getMailbox(c.env.DB, address);
     
     if (!mailbox) {
@@ -118,7 +173,7 @@ app.get('/api/mailboxes/:address', async (c) => {
 // 删除邮箱
 app.delete('/api/mailboxes/:address', async (c) => {
   try {
-    const address = c.req.param('address');
+    const address = getAddressParam(c.req.param('address'));
     await deleteMailbox(c.env.DB, address);
     
     return c.json({ success: true });
@@ -135,7 +190,7 @@ app.delete('/api/mailboxes/:address', async (c) => {
 // 获取邮件列表
 app.get('/api/mailboxes/:address/emails', async (c) => {
   try {
-    const address = c.req.param('address');
+    const address = getAddressParam(c.req.param('address'));
     const mailbox = await getMailbox(c.env.DB, address);
     
     if (!mailbox) {
