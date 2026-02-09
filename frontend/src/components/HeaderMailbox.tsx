@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createRandomMailbox, createCustomMailbox } from '../utils/api';
 import MailboxSwitcher from './MailboxSwitcher';
+import { MailboxContext } from '../contexts/MailboxContext';
 
 interface HeaderMailboxProps {
   mailbox: Mailbox | null;
@@ -19,112 +20,47 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
   isLoading
 }) => {
   const { t } = useTranslation();
+  // feat: 统一使用全局通知
+  const { showSuccessMessage, showErrorMessage } = useContext(MailboxContext);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [customAddress, setCustomAddress] = useState('');
   const [selectedDomain, setSelectedDomain] = useState(domain);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [showCopyTooltip, setShowCopyTooltip] = useState(false);
-  const [copyError, setCopyError] = useState<string | null>(null);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [customAddressError, setCustomAddressError] = useState<string | null>(null);
-  const [customAddressSuccess, setCustomAddressSuccess] = useState<string | null>(null);
-  const [showRefreshSuccess, setShowRefreshSuccess] = useState(false);
-  const copyTooltipTimeoutRef = useRef<number | null>(null);
-  const refreshSuccessTimeoutRef = useRef<number | null>(null);
-  const successMessageTimeoutRef = useRef<number | null>(null);
-  const errorMessageTimeoutRef = useRef<number | null>(null);
-  
-  // 当props中的domain变化时更新selectedDomain
+
   useEffect(() => {
     setSelectedDomain(domain);
   }, [domain]);
-  
-  // 清除提示的定时器
-  useEffect(() => {
-    return () => {
-      if (copyTooltipTimeoutRef.current) {
-        window.clearTimeout(copyTooltipTimeoutRef.current);
-      }
-      if (refreshSuccessTimeoutRef.current) {
-        window.clearTimeout(refreshSuccessTimeoutRef.current);
-      }
-      if (successMessageTimeoutRef.current) {
-        window.clearTimeout(successMessageTimeoutRef.current);
-      }
-      if (errorMessageTimeoutRef.current) {
-        window.clearTimeout(errorMessageTimeoutRef.current);
-      }
-    };
-  }, []);
   
   if (!mailbox || isLoading) return null;
   
   // 复制邮箱地址到剪贴板
   const copyToClipboard = () => {
-    // 清除之前的错误信息
-    setCopyError(null);
-    
     const fullAddress = mailbox.address.includes('@') ? mailbox.address : `${mailbox.address}@${selectedDomain}`;
     navigator.clipboard.writeText(fullAddress)
       .then(() => {
-        // 显示复制成功提示
-        setShowCopyTooltip(true);
-        
-        // 2秒后隐藏提示
-        if (copyTooltipTimeoutRef.current) {
-          window.clearTimeout(copyTooltipTimeoutRef.current);
-        }
-        copyTooltipTimeoutRef.current = window.setTimeout(() => {
-          setShowCopyTooltip(false);
-        }, 2000);
+        // feat: 使用全局通知替换 Tooltip
+        showSuccessMessage(t('mailbox.copySuccess'));
       })
       .catch(() => {
-        // 显示复制失败错误
-        setCopyError(t('mailbox.copyFailed'));
-        
-        // 3秒后隐藏错误
-        if (errorMessageTimeoutRef.current) {
-          window.clearTimeout(errorMessageTimeoutRef.current);
-        }
-        errorMessageTimeoutRef.current = window.setTimeout(() => {
-          setCopyError(null);
-        }, 3000);
+        // fix: 使用全局通知函数显示复制失败
+        showErrorMessage(t('mailbox.copyFailed'));
       });
   };
   
   // 更换随机邮箱
   const handleRefreshMailbox = async () => {
-    // 清除之前的错误信息
-    setRefreshError(null);
-    
     setIsActionLoading(true);
     const result = await createRandomMailbox();
     setIsActionLoading(false);
     
     if (result.success && result.mailbox) {
       onMailboxChange(result.mailbox);
-      
-      // 显示更新成功提示
-      setShowRefreshSuccess(true);
-      
-      // 3秒后隐藏提示
-      if (refreshSuccessTimeoutRef.current) {
-        window.clearTimeout(refreshSuccessTimeoutRef.current);
-      }
-      refreshSuccessTimeoutRef.current = window.setTimeout(() => {
-        setShowRefreshSuccess(false);
-      }, 3000);
+      // feat: 使用全局通知替换 Tooltip
+      showSuccessMessage(t('mailbox.refreshSuccess'));
     } else {
-      // 显示刷新失败错误
-      setRefreshError(t('mailbox.refreshFailed'));
-      
-      // 3秒后隐藏错误
-      if (errorMessageTimeoutRef.current) {
-        window.clearTimeout(errorMessageTimeoutRef.current);
-      }
-      errorMessageTimeoutRef.current = window.setTimeout(() => {
-        setRefreshError(null);
-      }, 3000);
+      // fix: 使用全局通知函数显示刷新失败
+      showErrorMessage(t('mailbox.refreshFailed'));
     }
   };
   
@@ -132,9 +68,8 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
   const handleCreateCustom = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 清除之前的错误和成功信息
+    // 清除之前的错误信息
     setCustomAddressError(null);
-    setCustomAddressSuccess(null);
     
     if (!customAddress.trim()) {
       setCustomAddressError(t('mailbox.invalidAddress'));
@@ -147,29 +82,23 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
     
     if (result.success && result.mailbox) {
       onMailboxChange(result.mailbox);
+      // fix: 使用全局通知函数显示成功
+      showSuccessMessage(t('mailbox.createSuccess'));
       
-      // 显示成功消息在表单下方
-      setCustomAddressSuccess(t('mailbox.createSuccess'));
-      
-      // 3秒后自动关闭表单
-      if (successMessageTimeoutRef.current) {
-        window.clearTimeout(successMessageTimeoutRef.current);
-      }
-      successMessageTimeoutRef.current = window.setTimeout(() => {
+      // 成功后延迟关闭自定义输入框
+      setTimeout(() => {
         setIsCustomMode(false);
         setCustomAddress('');
-        setCustomAddressSuccess(null);
-      }, 3000);
+      }, 1500);
+
     } else {
-      // 检查错误信息是否包含"邮箱地址已存在"
-      const isAddressExistsError = 
-        result.error === 'Address already exists' || 
-        String(result.error).includes('已存在');
-      
+      const isAddressExistsError = result.error === 'Address already exists' || String(result.error).includes('已存在');
       if (isAddressExistsError) {
+        // fix: 对于表单内校验错误，保留局部状态提示
         setCustomAddressError(t('mailbox.addressExists'));
       } else {
-        setCustomAddressError(t('mailbox.createFailed'));
+        // fix: 对于通用创建失败，使用全局通知
+        showErrorMessage(t('mailbox.createFailed'));
       }
     }
   };
@@ -179,7 +108,6 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
     setIsCustomMode(false);
     setCustomAddress('');
     setCustomAddressError(null);
-    setCustomAddressSuccess(null);
   };
   
   // 移动设备上的邮箱地址显示
@@ -198,8 +126,10 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
   };
   
   // 切换域名
-  const handleDomainChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleDomainChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedDomain(e.target.value);
+    // [fix] 切换域名后自动更换邮箱
+    await handleRefreshMailbox();
   };
   
   // 按钮基础样式
@@ -220,7 +150,6 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
                 onChange={(e) => {
                   setCustomAddress(e.target.value);
                   if (customAddressError) setCustomAddressError(null);
-                  if (customAddressSuccess) setCustomAddressSuccess(null);
                 }}
                 className={`w-32 md:w-40 px-2 py-1 text-sm border rounded-l-md focus:outline-none focus:ring-1 focus:ring-primary ${
                   customAddressError ? 'border-red-500' : ''
@@ -231,15 +160,21 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
               />
               <span className="flex items-center px-2 py-1 text-sm border-y border-r rounded-r-md bg-muted">
                 @
-                <select 
-                  value={selectedDomain}
-                  onChange={handleDomainChange}
-                  className="bg-transparent border-none focus:outline-none"
-                >
-                  {domains.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
+                {/* [fix]: 为select包裹一个relative容器，用于绝对定位自定义箭头 */}
+                <div className="relative">
+                  <select 
+                    value={selectedDomain}
+                    onChange={handleDomainChange}
+                    // [fix]: 添加 appearance-none 移除原生样式，并增加padding-right为箭头留出空间
+                    className="appearance-none bg-transparent border-none focus:outline-none pl-1 pr-5"
+                  >
+                    {domains.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                  {/* [fix]: 添加自定义的下拉箭头图标 */}
+                  <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none"></i>
+                </div>
               </span>
             </div>
             <button
@@ -266,29 +201,29 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
             </div>
           )}
           
-          {/* 成功信息显示 */}
-          {customAddressSuccess && (
-            <div className="text-green-500 text-xs px-1">
-              {customAddressSuccess}
-            </div>
-          )}
         </form>
       ) : (
         <>
           <div className="flex items-center">
             {/* 电脑端邮箱地址显示 */}
             <div className="hidden sm:flex items-center">
-              <code className="bg-muted px-2 py-1 rounded text-sm font-medium">
+              <code className="bg-muted px-2 py-1 rounded text-sm font-medium flex items-center">
                 {mailbox.address}@
-                <select 
-                  value={selectedDomain}
-                  onChange={handleDomainChange}
-                  className="bg-transparent border-none focus:outline-none px-0 py-0 font-medium"
-                >
-                  {domains.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
+                {/* [fix]: 为select包裹一个relative容器，用于绝对定位自定义箭头 */}
+                <div className="relative">
+                  <select 
+                    value={selectedDomain}
+                    onChange={handleDomainChange}
+                    // [fix]: 添加 appearance-none 移除原生样式，并增加padding-right为箭头留出空间
+                    className="appearance-none bg-transparent border-none focus:outline-none pl-1 pr-4 font-medium"
+                  >
+                    {domains.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                  {/* [fix]: 添加自定义的下拉箭头图标 */}
+                  <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none"></i>
+                </div>
               </code>
               
               {/* 添加邮箱切换组件 */}
@@ -299,22 +234,14 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
               />
               
               <div className="relative">
-              <button 
-                onClick={copyToClipboard}
+                <button 
+                  onClick={copyToClipboard}
                   className={`w-8 h-8 ${copyButtonClass}`}
                   aria-label={t('common.copy')}
                   title={t('common.copy')}
-              >
+                >
                   <i className="fas fa-copy text-sm"></i>
                 </button>
-                
-                {/* 复制成功提示 */}
-                {showCopyTooltip && (
-                  <div className="absolute top-9 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground text-xs py-1 px-2 rounded shadow-lg whitespace-nowrap z-10">
-                    {t('mailbox.copySuccess')}
-                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rotate-45"></div>
-                  </div>
-                )}
               </div>
               
               <div className="relative">
@@ -326,14 +253,6 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
                 >
                   <i className="fas fa-sync-alt text-sm"></i>
                 </button>
-                
-                {/* 更新成功提示 */}
-                {showRefreshSuccess && (
-                  <div className="absolute top-9 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground text-xs py-1 px-2 rounded shadow-lg whitespace-nowrap z-10">
-                    {t('mailbox.refreshSuccess')}
-                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rotate-45"></div>
-                  </div>
-                )}
               </div>
               
               <button
@@ -346,12 +265,6 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
               </button>
             </div>
             
-            {/* 错误信息显示 */}
-            {(copyError || refreshError) && (
-              <div className="text-red-500 text-xs mt-1">
-                {copyError || refreshError}
-              </div>
-            )}
           </div>
           
           {/* 移动版显示 */}
@@ -370,22 +283,14 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
               </div>
               
               <div className="relative">
-              <button 
-                onClick={copyToClipboard}
+                <button 
+                  onClick={copyToClipboard}
                   className={`w-6 h-6 ${copyButtonClass}`}
                   aria-label={t('common.copy')}
                   title={t('common.copy')}
-              >
+                >
                   <i className="fas fa-copy text-xs"></i>
                 </button>
-                
-                {/* 复制成功提示 */}
-                {showCopyTooltip && (
-                  <div className="absolute top-7 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground text-xs py-1 px-2 rounded shadow-lg whitespace-nowrap z-10">
-                    {t('mailbox.copySuccess')}
-                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rotate-45"></div>
-                  </div>
-                )}
               </div>
             </div>
             
@@ -393,39 +298,24 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
               <div className="relative">
                 <button
                   onClick={handleRefreshMailbox}
-                    className={`w-6 h-6 ${refreshButtonClass}`}
+                  className={`w-6 h-6 ${refreshButtonClass}`}
                   disabled={isActionLoading}
-                    title={t('mailbox.refresh')}
+                  title={t('mailbox.refresh')}
                 >
-                    <i className="fas fa-sync-alt text-xs"></i>
+                  <i className="fas fa-sync-alt text-xs"></i>
                 </button>
-                
-                  {/* 更新成功提示 */}
-                {showRefreshSuccess && (
-                    <div className="absolute top-7 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground text-xs py-1 px-2 rounded shadow-lg whitespace-nowrap z-10">
-                    {t('mailbox.refreshSuccess')}
-                      <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rotate-45"></div>
-                  </div>
-                )}
               </div>
       
               <button
                 onClick={() => setIsCustomMode(true)}
-                    className={`w-6 h-6 ${customizeButtonClass}`}
+                className={`w-6 h-6 ${customizeButtonClass}`}
                 disabled={isActionLoading}
-                    title={t('mailbox.customize')}
+                title={t('mailbox.customize')}
               >
-                    <i className="fas fa-edit text-xs"></i>
+                <i className="fas fa-edit text-xs"></i>
               </button>
             </div>
           </div>
-      
-          {/* 错误信息显示 */}
-          {(copyError || refreshError) && (
-                <div className="text-red-500 text-xs mt-1">
-              {copyError || refreshError}
-            </div>
-          )}
         </>
       )}
     </div>
