@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from 'react'; // feat:
 import { useTranslation } from 'react-i18next';
 import { deleteMailbox as apiDeleteMailbox } from '../utils/api';
 import { MailboxContext } from '../contexts/MailboxContext'; // feat: 导入 MailboxContext
+import ConfirmDialog from './ConfirmDialog';
 
 interface MailboxSwitcherProps {
   currentMailbox: Mailbox;
@@ -17,6 +18,10 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
   const { showSuccessMessage, showErrorMessage } = useContext(MailboxContext);
   const [savedMailboxes, setSavedMailboxes] = useState<Mailbox[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isDeletingMailbox, setIsDeletingMailbox] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
+  const [mailboxToDelete, setMailboxToDelete] = useState<string | null>(null);
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // 组件挂载时加载保存的邮箱
@@ -108,57 +113,56 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
   };
 
   // 删除单个已保存的邮箱
-  const handleDeleteMailbox = async (address: string) => {
-    if (window.confirm(t('mailbox.confirmDeleteMailbox'))) {
-      // 调用API删除后端的邮箱
-      const result = await apiDeleteMailbox(address);
-      if (result.success) {
-        // 从前端列表和localStorage中移除
-        const updatedMailboxes = savedMailboxes.filter(m => m.address !== address);
-        setSavedMailboxes(updatedMailboxes);
-        localStorage.setItem('savedMailboxes', JSON.stringify(updatedMailboxes));
-        // feat: 删除成功提示
-        showSuccessMessage(t('mailbox.deleteSavedSuccess'));
-      } else {
-        // feat: 删除失败提示
-        showErrorMessage(t('mailbox.deleteFailed'));
-      }
+  const handleDeleteMailbox = async () => {
+    if (!mailboxToDelete) {
+      return;
     }
+
+    setIsDeletingMailbox(true);
+    const result = await apiDeleteMailbox(mailboxToDelete);
+    setIsDeletingMailbox(false);
+
+    if (result.success) {
+      const updatedMailboxes = savedMailboxes.filter(m => m.address !== mailboxToDelete);
+      setSavedMailboxes(updatedMailboxes);
+      localStorage.setItem('savedMailboxes', JSON.stringify(updatedMailboxes));
+      showSuccessMessage(t('mailbox.deleteSavedSuccess'));
+    } else {
+      showErrorMessage(t('mailbox.deleteFailed'));
+    }
+
+    setMailboxToDelete(null);
   };
 
   // 清空所有已保存的邮箱
   const handleClearAllMailboxes = async () => {
-    if (window.confirm(t('mailbox.confirmClearAllMailboxes'))) {
-      // 找出所有需要删除的邮箱（即列表中，非当前正在使用的邮箱）
-      const mailboxesToDelete = savedMailboxes.filter(m => m.address !== currentMailbox.address);
-      
-      // 如果没有需要删除的，直接返回
-      if(mailboxesToDelete.length === 0) {
-        setShowDropdown(false);
-        return;
-      }
+    const mailboxesToDelete = savedMailboxes.filter(m => m.address !== currentMailbox.address);
 
-      // 并行执行所有后端删除请求
-      const deletePromises = mailboxesToDelete.map(m => apiDeleteMailbox(m.address));
-      // feat: 使用 Promise.allSettled 来处理部分失败的情况
-      const results = await Promise.allSettled(deletePromises);
-      
-      // 从前端列表中只保留当前使用的邮箱
-      const currentMailboxToKeep = savedMailboxes.find(m => m.address === currentMailbox.address);
-      const mailboxesToKeep = currentMailboxToKeep ? [currentMailboxToKeep] : [];
-      
-      // 更新UI和localStorage
-      setSavedMailboxes(mailboxesToKeep);
-      localStorage.setItem('savedMailboxes', JSON.stringify(mailboxesToKeep));
+    if (mailboxesToDelete.length === 0) {
       setShowDropdown(false);
+      setShowClearAllDialog(false);
+      return;
+    }
 
-      // feat: 根据结果显示不同的通知
-      const failedCount = results.filter(r => r.status === 'rejected').length;
-      if (failedCount > 0) {
-        showErrorMessage(t('mailbox.clearAllFailed', { count: failedCount }));
-      } else {
-        showSuccessMessage(t('mailbox.clearAllSuccess'));
-      }
+    setIsClearingAll(true);
+
+    const deletePromises = mailboxesToDelete.map(m => apiDeleteMailbox(m.address));
+    const results = await Promise.allSettled(deletePromises);
+
+    const currentMailboxToKeep = savedMailboxes.find(m => m.address === currentMailbox.address);
+    const mailboxesToKeep = currentMailboxToKeep ? [currentMailboxToKeep] : [];
+
+    setSavedMailboxes(mailboxesToKeep);
+    localStorage.setItem('savedMailboxes', JSON.stringify(mailboxesToKeep));
+    setShowDropdown(false);
+    setShowClearAllDialog(false);
+    setIsClearingAll(false);
+
+    const failedCount = results.filter(r => r.status === 'rejected').length;
+    if (failedCount > 0) {
+      showErrorMessage(t('mailbox.clearAllFailed', { count: failedCount }));
+    } else {
+      showSuccessMessage(t('mailbox.clearAllSuccess'));
     }
   };
 
@@ -185,7 +189,7 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
           <div className="text-xs font-medium px-2 py-1 text-muted-foreground flex justify-between items-center">
             {t('mailbox.savedMailboxes') || "已保存的邮箱"}
             <button
-              onClick={handleClearAllMailboxes}
+              onClick={() => setShowClearAllDialog(true)}
               className="text-red-500 hover:text-red-700 text-xs"
               title={t('mailbox.clearAll') || "全部清除"}
             >
@@ -206,7 +210,7 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
                 </button>
                 {m.address !== currentMailbox.address && (
                   <button
-                    onClick={() => handleDeleteMailbox(m.address)}
+                    onClick={() => setMailboxToDelete(m.address)}
                     className="p-2 text-red-500 hover:text-red-700"
                     title={t('common.delete') || "删除"}
                   >
@@ -218,6 +222,31 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(mailboxToDelete)}
+        title={t('mailbox.deleteDialogTitle')}
+        description={t('mailbox.confirmDeleteMailbox')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        onConfirm={handleDeleteMailbox}
+        onCancel={() => setMailboxToDelete(null)}
+        isLoading={isDeletingMailbox}
+        loadingText={t('ui.deleting')}
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={showClearAllDialog}
+        title={t('mailbox.clearAllDialogTitle')}
+        description={t('mailbox.confirmClearAllMailboxes')}
+        confirmText={t('mailbox.clearAll')}
+        cancelText={t('common.cancel')}
+        onConfirm={handleClearAllMailboxes}
+        onCancel={() => setShowClearAllDialog(false)}
+        isLoading={isClearingAll}
+        variant="danger"
+      />
     </div>
   );
 };

@@ -34,6 +34,7 @@
     "customAddress": "Custom Address",
     "customAddressPlaceholder": "Enter custom address",
     "expiresIn": "Expires In",
+    "expiresInLabel": "Remaining",
     "expiresAt": "Expires At",
     "created": "Created At",
     "timeLeft": "Time Left",
@@ -64,7 +65,9 @@
     "confirmClearAllMailboxes": "Are you sure you want to clear all saved mailboxes? (The current mailbox will not be deleted)",
     "clearAll": "Clear All",
     "clearAllSuccess": "All saved mailboxes have been cleared",
-    "clearAllFailed": "Failed to clear some mailboxes ({{count}})"
+    "clearAllFailed": "Failed to clear some mailboxes ({{count}})",
+    "deleteDialogTitle": "Confirm mailbox deletion",
+    "clearAllDialogTitle": "Confirm clearing mailboxes"
   },
   "email": {
     "inbox": "Inbox",
@@ -73,6 +76,8 @@
     "autoRefresh": "Auto Refresh",
     "autoRefreshOn": "Auto Refresh: On",
     "autoRefreshOff": "Auto Refresh: Off",
+    "modeAuto": "Auto",
+    "modeManual": "Manual",
     "from": "From",
     "to": "To",
     "subject": "Subject",
@@ -96,6 +101,9 @@
     "selectEmailPrompt": "Select an email to view details",
     "message": "message",
     "messages": "messages"
+  },
+  "ui": {
+    "deleting": "Deleting..."
   },
   "settings": {
     "language": "Language",

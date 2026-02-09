@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MailboxContext } from '../contexts/MailboxContext';
 import EmailDetail from './EmailDetail';
+import ConfirmDialog from './ConfirmDialog';
 
 interface EmailListProps {
   emails: Email[];
@@ -19,6 +20,7 @@ const EmailList: React.FC<EmailListProps> = ({
   const { t } = useTranslation();
   const { autoRefresh, setAutoRefresh, refreshEmails, mailbox, deleteMailbox } = useContext(MailboxContext);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
@@ -43,8 +45,8 @@ const EmailList: React.FC<EmailListProps> = ({
     const hours = Math.floor(timeLeftSeconds / 3600);
     const minutes = Math.floor((timeLeftSeconds % 3600) / 60);
     
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
+    if (hours > 0) return t('mailbox.expiresInTime', { hours, minutes });
+    return t('mailbox.expiresInMinutes', { minutes });
   };
 
   const getInitials = (name: string) => {
@@ -76,15 +78,14 @@ const EmailList: React.FC<EmailListProps> = ({
   };
   
   const handleDeleteMailbox = async () => {
-    if (window.confirm(t('mailbox.confirmDelete'))) {
-      setIsDeleting(true);
-      try {
-        await deleteMailbox();
-      } catch (error) {
-        console.error('Error deleting mailbox:', error);
-      } finally {
-        setIsDeleting(false);
-      }
+    setIsDeleting(true);
+    try {
+      await deleteMailbox();
+    } catch (error) {
+      console.error('Error deleting mailbox:', error);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
   
@@ -138,7 +139,7 @@ const EmailList: React.FC<EmailListProps> = ({
             title={autoRefresh ? t('email.autoRefreshOn') : t('email.autoRefreshOff')}
           >
             <i className={`fas fa-clock ${autoRefresh ? 'animate-pulse' : ''}`}></i>
-            <span className="hidden sm:inline">{autoRefresh ? 'Auto' : 'Manual'}</span>
+            <span className="hidden sm:inline">{autoRefresh ? t('email.modeAuto') : t('email.modeManual')}</span>
           </button>
 
           <div className="h-4 w-px bg-border/60 mx-1"></div>
@@ -152,7 +153,7 @@ const EmailList: React.FC<EmailListProps> = ({
           </button>
           
           <button
-            onClick={handleDeleteMailbox}
+            onClick={() => setShowDeleteDialog(true)}
             className="p-2 rounded-lg text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition-all active:scale-95"
             title={t('mailbox.delete')}
           >
@@ -171,7 +172,7 @@ const EmailList: React.FC<EmailListProps> = ({
              </span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
-            <span>Expires in:</span>
+            <span>{t('mailbox.expiresInLabel')}</span>
             <span className="font-mono font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-1.5 rounded">
               {calculateTimeLeft(mailbox.expiresAt)}
             </span>
@@ -265,6 +266,19 @@ const EmailList: React.FC<EmailListProps> = ({
           </ul>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        title={t('mailbox.deleteDialogTitle')}
+        description={t('mailbox.confirmDelete')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        onConfirm={handleDeleteMailbox}
+        onCancel={() => setShowDeleteDialog(false)}
+        isLoading={isDeleting}
+        loadingText={t('ui.deleting')}
+        variant="danger"
+      />
     </div>
   );
 };
