@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { createRandomMailbox, createCustomMailbox } from '../utils/api';
+import { createRandomMailbox, createCustomMailbox, getMailbox } from '../utils/api';
 import MailboxSwitcher from './MailboxSwitcher';
 import { MailboxContext } from '../contexts/MailboxContext';
 
@@ -10,6 +10,86 @@ interface HeaderMailboxProps {
   domain: string;
   domains: string[];
   isLoading: boolean;
+}
+
+const DOMAIN_MAILBOX_CACHE_KEY = 'domainMailboxCache';
+
+type DomainMailboxCache = Record<string, Mailbox>;
+
+function getDomainFromAddress(address: string): string | null {
+  const parts = address.split('@');
+  if (parts.length !== 2 || !parts[1]) {
+    return null;
+  }
+  return parts[1].trim().toLowerCase();
+}
+
+function readDomainMailboxCache(): DomainMailboxCache {
+  try {
+    const cachedData = localStorage.getItem(DOMAIN_MAILBOX_CACHE_KEY);
+    if (!cachedData) {
+      return {};
+    }
+
+    const parsed = JSON.parse(cachedData) as DomainMailboxCache;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeDomainMailboxCache(cache: DomainMailboxCache): void {
+  try {
+    localStorage.setItem(DOMAIN_MAILBOX_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // ignore localStorage exceptions
+  }
+}
+
+function rememberMailboxByDomain(mailbox: Mailbox): void {
+  const domain = getDomainFromAddress(mailbox.address);
+  if (!domain) {
+    return;
+  }
+
+  const cache = readDomainMailboxCache();
+  cache[domain] = mailbox;
+  writeDomainMailboxCache(cache);
+}
+
+function getCachedMailboxByDomain(domain: string): Mailbox | null {
+  const normalizedDomain = domain.trim().toLowerCase();
+  if (!normalizedDomain) {
+    return null;
+  }
+
+  const cache = readDomainMailboxCache();
+  const cachedMailbox = cache[normalizedDomain];
+  if (!cachedMailbox) {
+    return null;
+  }
+
+  const now = Date.now() / 1000;
+  if (!cachedMailbox.address || cachedMailbox.expiresAt <= now) {
+    delete cache[normalizedDomain];
+    writeDomainMailboxCache(cache);
+    return null;
+  }
+
+  return cachedMailbox;
+}
+
+function removeCachedMailboxByDomain(domain: string): void {
+  const normalizedDomain = domain.trim().toLowerCase();
+  if (!normalizedDomain) {
+    return;
+  }
+
+  const cache = readDomainMailboxCache();
+  if (cache[normalizedDomain]) {
+    delete cache[normalizedDomain];
+    writeDomainMailboxCache(cache);
+  }
 }
 
 // Internal Component: Modern Custom Domain Selector
@@ -114,6 +194,14 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
     }
     setSelectedDomain(domain);
   }, [domain, mailbox]);
+
+  useEffect(() => {
+    if (!mailbox) {
+      return;
+    }
+
+    rememberMailboxByDomain(mailbox);
+  }, [mailbox]);
   
   if (!mailbox || isLoading) return null;
   
@@ -130,6 +218,7 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
     
     if (result.success && result.mailbox) {
       onMailboxChange(result.mailbox);
+      rememberMailboxByDomain(result.mailbox);
       showSuccessMessage(t('mailbox.refreshSuccess'));
     } else {
       showErrorMessage(t('mailbox.refreshFailed'));
@@ -151,6 +240,7 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
     
     if (result.success && result.mailbox) {
       onMailboxChange(result.mailbox);
+      rememberMailboxByDomain(result.mailbox);
       showSuccessMessage(t('mailbox.createSuccess'));
       setTimeout(() => {
         setIsCustomMode(false);
@@ -173,16 +263,38 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
   };
   
   const handleDomainChange = async (newDomain: string) => {
-    setSelectedDomain(newDomain);
+    const normalizedDomain = newDomain.trim().toLowerCase();
+    setSelectedDomain(normalizedDomain);
     
     // 如果不在自定义模式下，切换域名自动刷新邮箱
     if (!isCustomMode) {
+      const currentDomain = mailbox.address.includes('@') ? mailbox.address.split('@')[1].toLowerCase() : '';
+      if (currentDomain === normalizedDomain) {
+        return;
+      }
+
+      const cachedMailbox = getCachedMailboxByDomain(normalizedDomain);
+      if (cachedMailbox) {
+        setIsActionLoading(true);
+        const validationResult = await getMailbox(cachedMailbox.address);
+        setIsActionLoading(false);
+
+        if (validationResult.success && validationResult.mailbox) {
+          onMailboxChange(validationResult.mailbox);
+          showSuccessMessage(t('mailbox.switchSuccess'));
+          return;
+        }
+
+        removeCachedMailboxByDomain(normalizedDomain);
+      }
+
       setIsActionLoading(true);
-      const result = await createRandomMailbox(24, newDomain);
+      const result = await createRandomMailbox(24, normalizedDomain);
       setIsActionLoading(false);
 
       if (result.success && result.mailbox) {
         onMailboxChange(result.mailbox);
+        rememberMailboxByDomain(result.mailbox);
         showSuccessMessage(t('mailbox.refreshSuccess'));
       } else {
         showErrorMessage(t('mailbox.refreshFailed'));
