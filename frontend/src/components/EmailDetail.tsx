@@ -307,21 +307,21 @@ const EmailDetail: React.FC<EmailDetailProps> = ({ emailId, onClose }) => {
   return (
     <div className="bg-card text-card-foreground">
       {/* Header */}
-      <div className="p-6 border-b border-border/40">
+      <div className="p-4 sm:p-6 border-b border-border/40">
         <div className="flex justify-between items-start gap-4">
            <div className="flex-1 min-w-0">
-             <h2 className="text-xl sm:text-2xl font-bold leading-tight mb-3 text-foreground">
+             <h2 className="text-lg sm:text-2xl font-bold leading-tight mb-3 text-foreground break-words">
                {email.subject || t('email.noSubject')}
              </h2>
-             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                   <span className="font-medium text-foreground">{email.fromName || email.fromAddress}</span>
-                   <span className="opacity-60">&lt;{email.fromAddress}&gt;</span>
+             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5 min-w-0">
+                   <span className="font-medium text-foreground truncate">{email.fromName || email.fromAddress}</span>
+                   <span className="opacity-60 truncate">&lt;{email.fromAddress}&gt;</span>
                 </div>
                 <span className="hidden sm:inline opacity-40">|</span>
-                <span className="opacity-80">{formatDate(email.receivedAt)}</span>
+                <span className="opacity-80 whitespace-nowrap">{formatDate(email.receivedAt)}</span>
              </div>
-             <div className="mt-1 text-xs text-muted-foreground/70">
+             <div className="mt-1 text-[10px] sm:text-xs text-muted-foreground/70 truncate">
                 To: {email.toAddress}
              </div>
            </div>

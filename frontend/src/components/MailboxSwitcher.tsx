@@ -238,11 +238,11 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="w-8 h-8 flex items-center justify-center rounded-md transition-all duration-200 hover:bg-primary/20 hover:text-primary hover:scale-110 mr-1"
+        className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-background/80 hover:text-foreground hover:shadow-sm transition-all duration-200 active:scale-90 active:bg-background"
         aria-label={t('mailbox.switch') || "切换邮箱"}
         title={t('mailbox.switch') || "切换邮箱"}
       >
-        <i className="fas fa-exchange-alt text-sm"></i>
+        <i className="fas fa-exchange-alt text-[10px] sm:text-xs"></i>
       </button>
 
       {showDropdown && (
