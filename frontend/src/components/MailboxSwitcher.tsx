@@ -247,7 +247,7 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
 
       {showDropdown && (
         // [fix]: 将 bg-white 替换为 bg-popover 和 text-popover-foreground 以支持黑暗模式
-        <div className="absolute top-9 left-0 bg-popover text-popover-foreground border rounded-md shadow-lg p-1 z-20 min-w-[250px]">
+        <div className="absolute right-0 top-9 z-20 w-[min(92vw,20rem)] rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
           <div className="text-xs font-medium px-2 py-1 text-muted-foreground flex justify-between items-center">
             {t('mailbox.savedMailboxes') || "已保存的邮箱"}
             <button

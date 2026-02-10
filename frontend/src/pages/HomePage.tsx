@@ -1,4 +1,4 @@
-import React, { useContext, useRef } from 'react';
+import React, { useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import EmailList from '../components/EmailList';
 import ScrollReveal from '../components/ScrollReveal';
@@ -36,7 +36,6 @@ const StructuredData: React.FC = () => {
 const HomePage: React.FC = () => {
   const { t } = useTranslation();
   const { 
-    mailbox, 
     isLoading, 
     emails, 
     selectedEmail, 
@@ -56,8 +55,9 @@ const HomePage: React.FC = () => {
   }
   
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12 pb-20">
+    <>
       <StructuredData />
+      <div className="mx-auto max-w-7xl space-y-10 px-4 pb-20 pt-2 sm:space-y-12 sm:px-6 sm:pt-5 lg:px-8">
       
       {/* Email List Section - Fixed height for app-like feel */}
       <section className="h-[65vh] min-h-[500px]">
@@ -232,7 +232,8 @@ const HomePage: React.FC = () => {
           </div>
         </section>
       </ScrollReveal>
-    </div>
+      </div>
+    </>
   );
 };
 
