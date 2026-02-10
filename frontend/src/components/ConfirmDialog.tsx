@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -49,8 +50,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       ? 'bg-red-600 hover:bg-red-700 text-white disabled:bg-red-400'
       : 'bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-60';
 
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+  const dialogContent = (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/45 backdrop-blur-[1px]"
         onClick={() => {
@@ -99,6 +100,12 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(dialogContent, document.body);
 };
 
 export default ConfirmDialog;
