@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '../config';
 import { MailboxContext } from '../contexts/MailboxContext';
@@ -17,6 +17,57 @@ interface Attachment {
   createdAt: number;
   isLarge: boolean;
   chunksCount: number;
+}
+
+const OTP_KEYWORD_REGEX = /(otp|one[-\s]?time|verification|verify|security\s?code|passcode|验证码|校验码|动态码|动态口令|验证)/i;
+const OTP_NEAR_KEYWORD_REGEX = /(?:otp|one[-\s]?time|verification(?:\s+code)?|security\s?code|passcode|验证码|校验码|动态码|动态口令|验证(?:码)?)\D{0,20}([A-Z0-9]{4,8})/gi;
+const OTP_LEADING_CODE_REGEX = /\b([A-Z0-9]{4,8})\b\D{0,20}(?:otp|verification(?:\s+code)?|security\s?code|passcode|验证码|校验码|动态码|动态口令|验证(?:码)?)/gi;
+const OTP_DIGIT_FALLBACK_REGEX = /\b\d{4,8}\b/g;
+
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function pickOtpCandidates(sourceText: string): string[] {
+  if (!sourceText) {
+    return [];
+  }
+
+  const candidates: string[] = [];
+  const upperText = sourceText.toUpperCase();
+
+  for (const match of upperText.matchAll(OTP_NEAR_KEYWORD_REGEX)) {
+    if (match[1]) {
+      candidates.push(match[1]);
+    }
+  }
+
+  for (const match of upperText.matchAll(OTP_LEADING_CODE_REGEX)) {
+    if (match[1]) {
+      candidates.push(match[1]);
+    }
+  }
+
+  const lines = upperText.split(/[\n\r]+/);
+  for (const line of lines) {
+    if (!OTP_KEYWORD_REGEX.test(line)) {
+      continue;
+    }
+
+    const lineDigitCodes = line.match(OTP_DIGIT_FALLBACK_REGEX);
+    if (lineDigitCodes) {
+      candidates.push(...lineDigitCodes);
+    }
+  }
+
+  return Array.from(new Set(candidates)).slice(0, 3);
 }
 
 const EmailDetail: React.FC<EmailDetailProps> = ({ emailId, onClose }) => {
@@ -135,6 +186,25 @@ const EmailDetail: React.FC<EmailDetailProps> = ({ emailId, onClose }) => {
       minute: '2-digit',
     }).format(date);
   };
+
+  const otpCandidates = useMemo(() => {
+    if (!email) {
+      return [];
+    }
+
+    const textFromHtml = email.htmlContent ? stripHtmlToText(email.htmlContent) : '';
+    const sourceText = [email.subject || '', email.textContent || '', textFromHtml].join('\n');
+    return pickOtpCandidates(sourceText);
+  }, [email]);
+
+  const handleCopyOtp = async (otpCode: string) => {
+    try {
+      await navigator.clipboard.writeText(otpCode);
+      showSuccessMessage(t('email.otpCopied'));
+    } catch {
+      showErrorMessage(t('email.otpCopyFailed'));
+    }
+  };
   
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -221,7 +291,7 @@ const EmailDetail: React.FC<EmailDetailProps> = ({ emailId, onClose }) => {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-3">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p className="text-sm text-muted-foreground">Loading message content...</p>
+        <p className="text-sm text-muted-foreground">{t('email.loadingContent')}</p>
       </div>
     );
   }
@@ -277,6 +347,29 @@ const EmailDetail: React.FC<EmailDetailProps> = ({ emailId, onClose }) => {
       
       {/* Content */}
       <div className="p-6 overflow-x-auto">
+        {otpCandidates.length > 0 && (
+          <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <i className="fas fa-key text-primary"></i>
+              <h3 className="text-sm font-semibold text-foreground">{t('email.otpTitle')}</h3>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {otpCandidates.map((otpCode) => (
+                <button
+                  key={otpCode}
+                  type="button"
+                  onClick={() => handleCopyOtp(otpCode)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-background px-3 py-2 text-sm font-mono text-foreground transition-colors hover:bg-primary/10"
+                  title={t('email.copyOtp')}
+                >
+                  <span>{otpCode}</span>
+                  <i className="fas fa-copy text-xs text-primary" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {email.htmlContent ? (
           <div 
             className="prose prose-sm sm:prose max-w-none dark:prose-invert prose-a:text-primary prose-img:rounded-lg"

@@ -100,7 +100,12 @@
     "notFound": "邮件不存在或已被删除",
     "selectEmailPrompt": "请选择一封邮件查看详情",
     "message": "封邮件",
-    "messages": "封邮件"
+    "messages": "封邮件",
+    "otpTitle": "验证码",
+    "copyOtp": "复制验证码",
+    "otpCopied": "验证码已复制",
+    "otpCopyFailed": "验证码复制失败",
+    "loadingContent": "正在加载邮件内容..."
   },
   "ui": {
     "deleting": "删除中..."

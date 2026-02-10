@@ -4,6 +4,39 @@ import { deleteMailbox as apiDeleteMailbox } from '../utils/api';
 import { MailboxContext } from '../contexts/MailboxContext'; // feat: 导入 MailboxContext
 import ConfirmDialog from './ConfirmDialog';
 
+const DOMAIN_MAILBOX_CACHE_KEY = 'domainMailboxCache';
+
+function getDomainFromAddress(address: string): string | null {
+  const parts = address.split('@');
+  if (parts.length !== 2 || !parts[1]) {
+    return null;
+  }
+  return parts[1].trim().toLowerCase();
+}
+
+function removeDomainMailboxCacheByAddress(address: string): void {
+  const domain = getDomainFromAddress(address);
+  if (!domain) {
+    return;
+  }
+
+  try {
+    const cachedData = localStorage.getItem(DOMAIN_MAILBOX_CACHE_KEY);
+    if (!cachedData) {
+      return;
+    }
+
+    const cache = JSON.parse(cachedData) as Record<string, Mailbox>;
+    const cachedMailbox = cache[domain];
+    if (cachedMailbox && cachedMailbox.address === address) {
+      delete cache[domain];
+      localStorage.setItem(DOMAIN_MAILBOX_CACHE_KEY, JSON.stringify(cache));
+    }
+  } catch {
+    // ignore
+  }
+}
+
 interface MailboxSwitcherProps {
   currentMailbox: Mailbox;
   onSwitchMailbox: (mailbox: Mailbox) => void;
@@ -123,6 +156,7 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
     setIsDeletingMailbox(false);
 
     if (result.success) {
+      removeDomainMailboxCacheByAddress(mailboxToDelete);
       const updatedMailboxes = savedMailboxes.filter(m => m.address !== mailboxToDelete);
       setSavedMailboxes(updatedMailboxes);
       localStorage.setItem('savedMailboxes', JSON.stringify(updatedMailboxes));
@@ -148,6 +182,10 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
 
     const deletePromises = mailboxesToDelete.map(m => apiDeleteMailbox(m.address));
     const results = await Promise.allSettled(deletePromises);
+
+    for (const targetMailbox of mailboxesToDelete) {
+      removeDomainMailboxCacheByAddress(targetMailbox.address);
+    }
 
     const currentMailboxToKeep = savedMailboxes.find(m => m.address === currentMailbox.address);
     const mailboxesToKeep = currentMailboxToKeep ? [currentMailboxToKeep] : [];

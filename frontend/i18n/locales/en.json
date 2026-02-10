@@ -100,7 +100,12 @@
     "notFound": "Email not found or has been deleted",
     "selectEmailPrompt": "Select an email to view details",
     "message": "message",
-    "messages": "messages"
+    "messages": "messages",
+    "otpTitle": "Verification Code",
+    "copyOtp": "Copy verification code",
+    "otpCopied": "Verification code copied",
+    "otpCopyFailed": "Failed to copy verification code",
+    "loadingContent": "Loading message content..."
   },
   "ui": {
     "deleting": "Deleting..."

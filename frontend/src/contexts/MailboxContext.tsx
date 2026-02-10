@@ -10,6 +10,40 @@ import {
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_AUTO_REFRESH, AUTO_REFRESH_INTERVAL, getDefaultEmailDomain } from '../config';
 
+const DOMAIN_MAILBOX_CACHE_KEY = 'domainMailboxCache';
+
+function getDomainFromAddress(address: string): string | null {
+  const parts = address.split('@');
+  if (parts.length !== 2 || !parts[1]) {
+    return null;
+  }
+  return parts[1].trim().toLowerCase();
+}
+
+function removeDomainMailboxCacheByAddress(address: string): void {
+  const domain = getDomainFromAddress(address);
+  if (!domain) {
+    return;
+  }
+
+  try {
+    const cachedData = localStorage.getItem(DOMAIN_MAILBOX_CACHE_KEY);
+    if (!cachedData) {
+      return;
+    }
+
+    const cache = JSON.parse(cachedData) as Record<string, Mailbox>;
+    const cachedMailbox = cache[domain];
+
+    if (cachedMailbox && cachedMailbox.address === address) {
+      delete cache[domain];
+      localStorage.setItem(DOMAIN_MAILBOX_CACHE_KEY, JSON.stringify(cache));
+    }
+  } catch {
+    // ignore
+  }
+}
+
 // 邮件详情缓存接口
 interface EmailCache {
   [emailId: string]: {
@@ -143,14 +177,14 @@ export const MailboxProvider: React.FC<MailboxProviderProps> = ({ children }) =>
   }, []);
 
   // 创建新邮箱
-  const createNewMailbox = async () => {
+  const createNewMailbox = async (preferredDomain?: string) => {
     try {
       // 清除之前的错误和成功信息
       setErrorMessage(null);
       setSuccessMessage(null);
       setIsLoading(true);
-      const defaultDomain = await getDefaultEmailDomain();
-      const result = await createRandomMailbox(24, defaultDomain);
+      const targetDomain = preferredDomain || await getDefaultEmailDomain();
+      const result = await createRandomMailbox(24, targetDomain);
       if (result.success && result.mailbox) {
         setMailbox(result.mailbox);
         saveMailboxToLocalStorage(result.mailbox);
@@ -177,6 +211,9 @@ export const MailboxProvider: React.FC<MailboxProviderProps> = ({ children }) =>
   const deleteMailbox = async () => {
     if (!mailbox) return;
 
+    const currentAddress = mailbox.address;
+    const currentDomain = getDomainFromAddress(currentAddress) || undefined;
+
     try {
       // 清除之前的错误和成功信息
       setErrorMessage(null);
@@ -186,6 +223,7 @@ export const MailboxProvider: React.FC<MailboxProviderProps> = ({ children }) =>
       const result = await apiDeleteMailbox(mailbox.address);
 
       if (result.success) {
+        removeDomainMailboxCacheByAddress(currentAddress);
         // fix: 使用全局通知函数
         showSuccessMessage(t('mailbox.deleteSuccess'));
 
@@ -196,8 +234,8 @@ export const MailboxProvider: React.FC<MailboxProviderProps> = ({ children }) =>
         removeMailboxFromLocalStorage();
         clearEmailCache();
 
-        // 创建新邮箱
-        await createNewMailbox();
+        // 仅在当前域名下创建新邮箱，不影响其他域名
+        await createNewMailbox(currentDomain);
       } else {
         // fix: 使用全局通知函数
         showErrorMessage(t('mailbox.deleteFailed'));

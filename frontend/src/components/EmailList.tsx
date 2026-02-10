@@ -89,7 +89,7 @@ const EmailList: React.FC<EmailListProps> = ({
     }
   };
   
-  if (isLoading || isDeleting) {
+  if ((isLoading && emails.length === 0) || isDeleting) {
     return (
       <div className="bg-white dark:bg-zinc-900 rounded-xl border border-border/50 shadow-sm h-full flex flex-col p-6">
         <div className="flex justify-between items-center mb-6 border-b pb-4 border-border/40">
@@ -148,8 +148,9 @@ const EmailList: React.FC<EmailListProps> = ({
             onClick={handleRefresh}
             className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all active:scale-95"
             title={t('email.refresh')}
+            disabled={isLoading}
           >
-            <i className="fas fa-sync-alt"></i>
+            <i className={`fas fa-sync-alt ${isLoading ? 'animate-spin' : ''}`}></i>
           </button>
           
           <button
