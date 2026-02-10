@@ -51,6 +51,8 @@
     "confirmDelete": "确定要删除当前邮箱吗？删除后将立即创建新的匿名邮箱。",
     "invalidAddress": "无效的邮箱地址",
     "addressExists": "邮箱地址已存在",
+    "addressExistsHint": "邮箱 {{address}} 已存在，请换一个前缀，或切换到该邮箱后继续使用。",
+    "addressExistsSwitched": "检测到已存在邮箱，已自动切换到 {{address}}",
     "refresh": "更换邮箱",
     "refreshSuccess": "邮箱更换成功",
     "refreshFailed": "邮箱更换失败",

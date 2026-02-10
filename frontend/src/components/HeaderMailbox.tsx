@@ -233,9 +233,12 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
       setCustomAddressError(t('mailbox.invalidAddress'));
       return;
     }
+
+    const normalizedAddress = customAddress.trim();
+    const fullAddress = `${normalizedAddress}@${selectedDomain}`;
     
     setIsActionLoading(true);
-    const result = await createCustomMailbox(customAddress, selectedDomain);
+    const result = await createCustomMailbox(normalizedAddress, selectedDomain);
     setIsActionLoading(false);
     
     if (result.success && result.mailbox) {
@@ -249,7 +252,24 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
     } else {
       const isAddressExistsError = String(result.error).includes('已存在') || String(result.error).includes('Address already exists');
       if (isAddressExistsError) {
-        setCustomAddressError(t('mailbox.addressExists'));
+        setIsActionLoading(true);
+        const existingMailboxResult = await getMailbox(fullAddress);
+        setIsActionLoading(false);
+
+        if (existingMailboxResult.success && existingMailboxResult.mailbox) {
+          onMailboxChange(existingMailboxResult.mailbox);
+          rememberMailboxByDomain(existingMailboxResult.mailbox);
+          showSuccessMessage(t('mailbox.addressExistsSwitched', { address: fullAddress }));
+          setTimeout(() => {
+            setIsCustomMode(false);
+            setCustomAddress('');
+          }, 300);
+          return;
+        }
+
+        const existsMessage = t('mailbox.addressExistsHint', { address: fullAddress });
+        setCustomAddressError(existsMessage);
+        showErrorMessage(existsMessage);
       } else {
         showErrorMessage(t('mailbox.createFailed'));
       }
@@ -356,6 +376,14 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
               {isActionLoading ? <i className="fas fa-circle-notch fa-spin text-xs"></i> : <i className="fas fa-check text-xs"></i>}
             </button>
           </div>
+          {customAddressError && (
+            <div className="w-full px-2 pt-1">
+              <p className="flex items-start gap-1.5 text-xs text-red-500 dark:text-red-300">
+                <i className="fas fa-circle-exclamation mt-0.5"></i>
+                <span>{customAddressError}</span>
+              </p>
+            </div>
+          )}
         </form>
       ) : (
         <div className="flex w-full flex-wrap items-center bg-slate-100/80 dark:bg-neutral-800/60 rounded-2xl border border-border/50 shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 hover:border-border/80 transition-all duration-300 ease-out backdrop-blur-sm sm:w-auto sm:flex-nowrap sm:items-center sm:rounded-full">

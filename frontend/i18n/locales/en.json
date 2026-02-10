@@ -51,6 +51,8 @@
     "confirmDelete": "Are you sure you want to delete this mailbox? A new anonymous mailbox will be created immediately.",
     "invalidAddress": "Invalid email address",
     "addressExists": "Email address already exists",
+    "addressExistsHint": "Mailbox {{address}} already exists. Try another prefix or switch to this mailbox.",
+    "addressExistsSwitched": "Existing mailbox detected. Switched to {{address}} automatically",
     "refresh": "Change Address",
     "refreshSuccess": "Address changed successfully",
     "refreshFailed": "Failed to change address",
