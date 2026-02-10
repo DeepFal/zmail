@@ -172,16 +172,16 @@ const EmailList: React.FC<EmailListProps> = ({
       
       {/* Mailbox Info Bar */}
       {mailbox && (
-        <div className="px-3 sm:px-5 py-2 bg-blue-50/50 dark:bg-blue-900/10 border-b border-blue-100/50 dark:border-blue-900/20 text-[10px] sm:text-xs flex justify-between items-center gap-2">
-          <div className="flex items-center gap-1.5 text-blue-700 dark:text-blue-300 min-w-0">
-             <i className="fas fa-info-circle opacity-70 flex-shrink-0"></i>
-             <span className="truncate">
+        <div className="px-5 py-2 bg-blue-50/50 dark:bg-blue-900/10 border-b border-blue-100/50 dark:border-blue-900/20 text-xs flex justify-between items-center">
+          <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+             <i className="fas fa-info-circle opacity-70"></i>
+             <span className="truncate max-w-[200px] sm:max-w-none">
                {mailbox.address}
              </span>
           </div>
-          <div className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0">
-            <span className="hidden xs:inline">{t('mailbox.expiresInLabel')}</span>
-            <span className="font-mono font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-1.5 rounded whitespace-nowrap">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <span>{t('mailbox.expiresInLabel')}</span>
+            <span className="font-mono font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-1.5 rounded">
               {calculateTimeLeft(mailbox.expiresAt)}
             </span>
           </div>

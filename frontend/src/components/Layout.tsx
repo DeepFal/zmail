@@ -47,9 +47,9 @@ const Layout: React.FC = () => {
   };
   
   return (
-    <div className="flex h-screen flex-col bg-slate-50 dark:bg-neutral-950 transition-colors duration-300 overflow-x-hidden">
+    <div className="flex h-screen flex-col bg-slate-50 dark:bg-neutral-950 transition-colors duration-300">
       <SEO {...getSEOProps()} />
-      <div className="flex-none z-10 shadow-sm relative w-full">
+      <div className="flex-none z-10 shadow-sm relative">
         <Header 
           mailbox={mailbox} 
           onMailboxChange={setMailbox} 
@@ -57,7 +57,7 @@ const Layout: React.FC = () => {
           onShowInfo={handleShowInfo}
         />
       </div>
-      <main className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth w-full">
+      <main className="flex-1 overflow-y-auto scroll-smooth">
         <div className="h-full w-full max-w-7xl mx-auto">
           <Outlet />
         </div>

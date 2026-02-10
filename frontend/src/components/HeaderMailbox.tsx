@@ -132,13 +132,13 @@ const DomainSelector: React.FC<DomainSelectorProps> = ({ value, options, onChang
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`
-          flex items-center gap-1.5 px-1 sm:px-2 py-0.5 rounded-md transition-colors outline-none select-none max-w-[100px] sm:max-w-none
+          flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-colors outline-none select-none
           ${isOpen ? 'bg-muted/50 text-foreground' : 'text-muted-foreground hover:text-foreground'}
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
       >
-        <span className="font-mono text-xs sm:text-sm font-medium truncate">{value}</span>
-        <i className={`fas fa-chevron-down text-[10px] opacity-50 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} flex-shrink-0`}></i>
+        <span className="font-mono text-sm font-medium">{value}</span>
+        <i className={`fas fa-chevron-down text-[10px] opacity-50 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}></i>
       </button>
 
       {isOpen && (
@@ -357,13 +357,13 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
           </div>
         </form>
       ) : (
-        <div className="flex items-center bg-slate-100/80 dark:bg-neutral-800/60 rounded-full border border-border/50 shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 hover:border-border/80 transition-all duration-300 ease-out backdrop-blur-sm min-w-0">
+        <div className="flex items-center bg-slate-100/80 dark:bg-neutral-800/60 rounded-full border border-border/50 shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 hover:border-border/80 transition-all duration-300 ease-out backdrop-blur-sm">
            {/* Address Display */}
-           <div className="flex items-center pl-3 sm:pl-4 pr-1 sm:pr-1.5 py-1 sm:py-1.5 border-r border-border/40 gap-0.5 sm:gap-1 min-w-0">
-              <span className="font-mono text-xs sm:text-sm font-medium tracking-tight text-foreground select-all cursor-text truncate max-w-[60px] xs:max-w-[100px] sm:max-w-none">
+           <div className="flex items-center pl-4 pr-1.5 py-1.5 border-r border-border/40 gap-1">
+              <span className="font-mono text-sm font-medium tracking-tight text-foreground select-all cursor-text">
                 {mailbox.address.split('@')[0]}
               </span>
-              <span className="text-muted-foreground/60 text-xs sm:text-sm">@</span>
+              <span className="text-muted-foreground/60 text-sm">@</span>
               
               {/* Custom Domain Selector */}
               <DomainSelector 
@@ -371,18 +371,17 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
                 options={domains}
                 onChange={handleDomainChange}
                 disabled={isActionLoading}
-                className="min-w-0"
               />
            </div>
 
            {/* Command Actions */}
-           <div className="flex items-center gap-0 sm:gap-0.5 px-1 sm:px-1.5">
+           <div className="flex items-center gap-0.5 px-1.5">
               <button 
                 onClick={copyToClipboard}
                 className={actionBtnClass}
                 title={t('common.copy')}
               >
-                <i className="fas fa-copy text-[10px] sm:text-xs transform group-hover:scale-110 transition-transform"></i>
+                <i className="fas fa-copy text-xs transform group-hover:scale-110 transition-transform"></i>
               </button>
 
               <button
@@ -391,10 +390,10 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
                 disabled={isActionLoading}
                 title={t('mailbox.refresh')}
               >
-                 <i className={`fas fa-sync-alt text-[10px] sm:text-xs ${isActionLoading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`}></i>
+                 <i className={`fas fa-sync-alt text-xs ${isActionLoading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`}></i>
               </button>
 
-              {/* Mailbox Switcher Integration */}
+              {/* Mailbox Switcher Integration - Wrapper to enforce style matching */}
               <div className="flex items-center justify-center">
                  <MailboxSwitcher 
                   currentMailbox={mailbox}
@@ -408,7 +407,7 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
                 disabled={isActionLoading}
                 title={t('mailbox.customize')}
               >
-                <i className="fas fa-pen text-[10px] sm:text-xs"></i>
+                <i className="fas fa-pen text-xs"></i>
               </button>
            </div>
         </div>
