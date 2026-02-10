@@ -312,7 +312,7 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
           onSubmit={handleCreateCustom} 
           className="flex w-full flex-wrap items-center gap-1 bg-muted/50 rounded-2xl border border-primary/20 ring-2 ring-primary/10 px-2 py-1.5 animate-in fade-in zoom-in-95 duration-200 origin-left sm:w-auto sm:flex-nowrap sm:rounded-full sm:px-1 sm:py-0.5"
         >
-          <div className="flex min-w-0 flex-1 items-center pl-2 pr-1 sm:pl-3">
+          <div className="flex min-w-0 flex-1 items-center pl-2 pr-1 sm:pl-3 max-[360px]:w-full">
             <input
               type="text"
               value={customAddress}
@@ -339,7 +339,7 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
             />
           </div>
           
-          <div className="flex w-full items-center justify-end gap-1 bg-background/50 rounded-full p-0.5 sm:ml-1 sm:w-auto">
+          <div className="ml-auto flex items-center justify-end gap-1 rounded-full bg-background/50 p-0.5 max-[360px]:w-full sm:ml-1">
              <button
               type="button"
               onClick={handleCancelCustom}
@@ -358,9 +358,9 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
           </div>
         </form>
       ) : (
-        <div className="flex w-full flex-wrap items-stretch bg-slate-100/80 dark:bg-neutral-800/60 rounded-2xl border border-border/50 shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 hover:border-border/80 transition-all duration-300 ease-out backdrop-blur-sm sm:w-auto sm:flex-nowrap sm:items-center sm:rounded-full">
+        <div className="flex w-full flex-wrap items-center bg-slate-100/80 dark:bg-neutral-800/60 rounded-2xl border border-border/50 shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 hover:border-border/80 transition-all duration-300 ease-out backdrop-blur-sm sm:w-auto sm:flex-nowrap sm:items-center sm:rounded-full">
            {/* Address Display */}
-           <div className="flex min-w-0 flex-1 items-center gap-1 border-b border-border/30 px-3 py-2.5 sm:border-b-0 sm:border-r sm:border-border/40 sm:pl-4 sm:pr-1.5 sm:py-1.5">
+           <div className="flex min-w-0 flex-1 items-center gap-1 px-3 py-1.5 max-[360px]:w-full max-[360px]:border-b max-[360px]:border-border/30 max-[360px]:py-2 sm:border-r sm:border-border/40 sm:pl-4 sm:pr-1.5">
               <span className="min-w-0 truncate font-mono text-sm font-medium tracking-tight text-foreground select-all cursor-text">
                 {mailbox.address.split('@')[0]}
               </span>
@@ -377,7 +377,7 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
            </div>
 
            {/* Command Actions */}
-           <div className="flex w-full items-center justify-end gap-0.5 px-1.5 py-1 sm:w-auto sm:py-0">
+           <div className="ml-auto flex items-center justify-end gap-0.5 px-1.5 py-0.5 max-[360px]:w-full max-[360px]:pt-1 sm:py-0">
               <button 
                 onClick={copyToClipboard}
                 className={actionBtnClass}
