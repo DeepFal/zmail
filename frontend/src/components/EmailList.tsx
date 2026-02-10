@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MailboxContext } from '../contexts/MailboxContext';
 import EmailDetail from './EmailDetail';
@@ -21,6 +21,13 @@ const EmailList: React.FC<EmailListProps> = ({
   const { autoRefresh, setAutoRefresh, refreshEmails, mailbox, deleteMailbox } = useContext(MailboxContext);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setHasLoadedOnce(true);
+    }
+  }, [isLoading]);
   
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
@@ -89,7 +96,7 @@ const EmailList: React.FC<EmailListProps> = ({
     }
   };
   
-  if ((isLoading && emails.length === 0) || isDeleting) {
+  if ((!hasLoadedOnce && isLoading) || isDeleting) {
     return (
       <div className="bg-white dark:bg-zinc-900 rounded-xl border border-border/50 shadow-sm h-full flex flex-col p-6">
         <div className="flex justify-between items-center mb-6 border-b pb-4 border-border/40">
