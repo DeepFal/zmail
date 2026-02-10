@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from 'react'; // feat: 导入 useContext
 import { useTranslation } from 'react-i18next';
-import { deleteMailbox as apiDeleteMailbox } from '../utils/api';
+import { deleteMailbox as apiDeleteMailbox, getMailbox } from '../utils/api';
 import { MailboxContext } from '../contexts/MailboxContext'; // feat: 导入 MailboxContext
 import ConfirmDialog from './ConfirmDialog';
 
@@ -91,7 +91,7 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
         const mailboxes = JSON.parse(savedData) as Mailbox[];
         // 过滤掉已过期的邮箱
         const now = Date.now() / 1000;
-        const validMailboxes = mailboxes.filter(m => m.expiresAt > now);
+        const validMailboxes = mailboxes.filter(m => m.expiresAt > now && m.address?.includes('@'));
         setSavedMailboxes(validMailboxes);
       }
     } catch (error) {
@@ -116,7 +116,7 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
       }
       
       // 过滤掉已过期的邮箱
-      mailboxes = mailboxes.filter(m => m.expiresAt > now);
+      mailboxes = mailboxes.filter(m => m.expiresAt > now && m.address?.includes('@'));
       
       // 检查当前邮箱是否已在列表中
       const mailboxIndex = mailboxes.findIndex(m => m.address === mailbox.address);
@@ -138,11 +138,35 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
   };
 
   // 切换到选择的邮箱
-  const handleSwitchMailbox = (mailbox: Mailbox) => {
-    onSwitchMailbox(mailbox);
+  const handleSwitchMailbox = async (targetMailbox: Mailbox) => {
+    if (targetMailbox.address === currentMailbox.address) {
+      setShowDropdown(false);
+      return;
+    }
+
+    const verifyResult = await getMailbox(targetMailbox.address);
+
+    if (verifyResult.success && verifyResult.mailbox) {
+      onSwitchMailbox(verifyResult.mailbox);
+      setShowDropdown(false);
+      showSuccessMessage(t('mailbox.switchSuccess'));
+      return;
+    }
+
+    const errorText = String(verifyResult.error || '').toLowerCase();
+    const isMailboxMissing = errorText.includes('not found') || errorText.includes('不存在');
+
+    if (isMailboxMissing) {
+      removeDomainMailboxCacheByAddress(targetMailbox.address);
+      const updatedMailboxes = savedMailboxes.filter(m => m.address !== targetMailbox.address);
+      setSavedMailboxes(updatedMailboxes);
+      localStorage.setItem('savedMailboxes', JSON.stringify(updatedMailboxes));
+      showErrorMessage(t('mailbox.notFound'));
+    } else {
+      showErrorMessage(t('mailbox.refreshFailed'));
+    }
+
     setShowDropdown(false);
-    // feat: 切换邮箱也给出提示
-    showSuccessMessage(t('mailbox.switchSuccess'));
   };
 
   // 删除单个已保存的邮箱
