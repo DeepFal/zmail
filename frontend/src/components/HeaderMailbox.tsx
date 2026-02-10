@@ -306,13 +306,13 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
   const actionBtnClass = "w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-background/80 hover:text-foreground hover:shadow-sm transition-all duration-200 active:scale-90 active:bg-background";
 
   return (
-    <div className="flex items-center perspective-1000">
+    <div className="flex w-full items-center perspective-1000">
       {isCustomMode ? (
         <form 
           onSubmit={handleCreateCustom} 
-          className="flex items-center bg-muted/50 rounded-full border border-primary/20 ring-2 ring-primary/10 pl-1 pr-1 py-0.5 animate-in fade-in zoom-in-95 duration-200 origin-left"
+          className="flex w-full flex-wrap items-center gap-1 bg-muted/50 rounded-2xl border border-primary/20 ring-2 ring-primary/10 px-2 py-1.5 animate-in fade-in zoom-in-95 duration-200 origin-left sm:w-auto sm:flex-nowrap sm:rounded-full sm:px-1 sm:py-0.5"
         >
-          <div className="flex items-center pl-3 pr-1">
+          <div className="flex min-w-0 flex-1 items-center pl-2 pr-1 sm:pl-3">
             <input
               type="text"
               value={customAddress}
@@ -320,7 +320,7 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
                 setCustomAddress(e.target.value);
                 if (customAddressError) setCustomAddressError(null);
               }}
-              className={`w-28 sm:w-32 bg-transparent text-sm font-medium focus:outline-none placeholder:text-muted-foreground/50 transition-colors ${
+              className={`min-w-0 flex-1 bg-transparent text-sm font-medium focus:outline-none placeholder:text-muted-foreground/50 transition-colors sm:w-32 sm:flex-none ${
                 customAddressError ? 'text-red-500 placeholder:text-red-300' : 'text-foreground'
               }`}
               placeholder={t('mailbox.customAddressPlaceholder')}
@@ -335,10 +335,11 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
               options={domains}
               onChange={setSelectedDomain} // 自定义模式下切换域名不刷新邮箱
               disabled={isActionLoading}
+              className="min-w-[96px]"
             />
           </div>
           
-          <div className="flex items-center gap-1 bg-background/50 rounded-full p-0.5 ml-1">
+          <div className="flex w-full items-center justify-end gap-1 bg-background/50 rounded-full p-0.5 sm:ml-1 sm:w-auto">
              <button
               type="button"
               onClick={handleCancelCustom}
@@ -357,10 +358,10 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
           </div>
         </form>
       ) : (
-        <div className="flex items-center bg-slate-100/80 dark:bg-neutral-800/60 rounded-full border border-border/50 shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 hover:border-border/80 transition-all duration-300 ease-out backdrop-blur-sm">
+        <div className="flex w-full flex-wrap items-stretch bg-slate-100/80 dark:bg-neutral-800/60 rounded-2xl border border-border/50 shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 hover:border-border/80 transition-all duration-300 ease-out backdrop-blur-sm sm:w-auto sm:flex-nowrap sm:items-center sm:rounded-full">
            {/* Address Display */}
-           <div className="flex items-center pl-4 pr-1.5 py-1.5 border-r border-border/40 gap-1">
-              <span className="font-mono text-sm font-medium tracking-tight text-foreground select-all cursor-text">
+           <div className="flex min-w-0 flex-1 items-center gap-1 border-b border-border/30 px-3 py-2.5 sm:border-b-0 sm:border-r sm:border-border/40 sm:pl-4 sm:pr-1.5 sm:py-1.5">
+              <span className="min-w-0 truncate font-mono text-sm font-medium tracking-tight text-foreground select-all cursor-text">
                 {mailbox.address.split('@')[0]}
               </span>
               <span className="text-muted-foreground/60 text-sm">@</span>
@@ -371,11 +372,12 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
                 options={domains}
                 onChange={handleDomainChange}
                 disabled={isActionLoading}
+                className="min-w-[96px]"
               />
            </div>
 
            {/* Command Actions */}
-           <div className="flex items-center gap-0.5 px-1.5">
+           <div className="flex w-full items-center justify-end gap-0.5 px-1.5 py-1 sm:w-auto sm:py-0">
               <button 
                 onClick={copyToClipboard}
                 className={actionBtnClass}
