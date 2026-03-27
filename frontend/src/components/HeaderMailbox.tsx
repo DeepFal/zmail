@@ -77,7 +77,7 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
     }
     
     setIsActionLoading(true);
-    const result = await createCustomMailbox(customAddress);
+    const result = await createCustomMailbox(customAddress, selectedDomain);
     setIsActionLoading(false);
     
     if (result.success && result.mailbox) {
