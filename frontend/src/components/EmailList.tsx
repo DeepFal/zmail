@@ -2,7 +2,6 @@ import React, { useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MailboxContext } from '../contexts/MailboxContext';
 import EmailDetail from './EmailDetail';
-import { pickOtpCandidates, stripHtmlToText } from '../utils/otp';
 
 interface EmailListProps {
   emails: Email[];
@@ -18,7 +17,7 @@ const EmailList: React.FC<EmailListProps> = ({
   isLoading 
 }) => {
   const { t } = useTranslation();
-  const { autoRefresh, setAutoRefresh, refreshEmails, mailbox, deleteMailbox, showSuccessMessage, showErrorMessage, emailCache } = useContext(MailboxContext);
+  const { autoRefresh, setAutoRefresh, refreshEmails, mailbox, deleteMailbox, showSuccessMessage, showErrorMessage } = useContext(MailboxContext);
   const [isDeleting, setIsDeleting] = useState(false);
   
   const formatDate = (timestamp: number) => {
@@ -179,17 +178,9 @@ const EmailList: React.FC<EmailListProps> = ({
                 <div className="text-sm truncate">
                   {email.subject || t('email.noSubject')}
                 </div>
-                {(() => {
-                  const cached = emailCache[email.id];
-                  if (!cached) return null;
-                  const { email: cachedEmail } = cached;
-                  const textFromHtml = cachedEmail.htmlContent ? stripHtmlToText(cachedEmail.htmlContent) : '';
-                  const sourceText = [cachedEmail.subject || '', cachedEmail.textContent || '', textFromHtml].join('\n');
-                  const otps = pickOtpCandidates(sourceText);
-                  if (otps.length === 0) return null;
-                  return (
+                {email.otpCodes && email.otpCodes.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1.5" onClick={(e) => e.stopPropagation()}>
-                      {otps.map((code) => (
+                      {email.otpCodes.map((code) => (
                         <button
                           key={code}
                           type="button"
@@ -206,8 +197,7 @@ const EmailList: React.FC<EmailListProps> = ({
                         </button>
                       ))}
                     </div>
-                  );
-                })()}
+                  )}
               </li>
               {selectedEmailId === email.id && (
                 <li className="border-t border-muted">

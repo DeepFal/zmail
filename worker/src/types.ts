@@ -61,6 +61,7 @@ export interface EmailListItem {
   receivedAt: number;
   hasAttachments: boolean;
   isRead: boolean;
+  otpCodes: string[];
 }
 
 // 附件类型

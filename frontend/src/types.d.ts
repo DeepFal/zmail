@@ -26,6 +26,7 @@ interface Email {
   receivedAt: number;
   hasAttachments: boolean;
   isRead: boolean;
+  otpCodes?: string[];
 }
 
 interface Attachment {

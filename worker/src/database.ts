@@ -15,7 +15,40 @@ import {
   calculateExpiryTimestamp 
 } from './utils';
 
-// 附件分块大小（字节）
+const OTP_NEAR_KEYWORD_REGEX = /(?:otp|one[-\s]?time|verification(?:\s+code)?|security\s?code|passcode|验证码|校验码|动态码|动态口令|验证(?:码)?)\D{0,20}([A-Z0-9]{4,8})/gi;
+const OTP_LEADING_CODE_REGEX = /\b([A-Z0-9]{4,8})\b\D{0,20}(?:otp|verification(?:\s+code)?|security\s?code|passcode|验证码|校验码|动态码|动态口令|验证(?:码)?)/gi;
+const OTP_KEYWORD_REGEX = /(otp|one[-\s]?time|verification|verify|security\s?code|passcode|验证码|校验码|动态码|动态口令|验证)/i;
+const OTP_DIGIT_FALLBACK_REGEX = /\b\d{4,8}\b/g;
+
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function pickOtpCandidates(sourceText: string): string[] {
+  if (!sourceText) return [];
+  const candidates: string[] = [];
+  const upperText = sourceText.toUpperCase();
+  for (const match of upperText.matchAll(OTP_NEAR_KEYWORD_REGEX)) {
+    if (match[1]) candidates.push(match[1]);
+  }
+  for (const match of upperText.matchAll(OTP_LEADING_CODE_REGEX)) {
+    if (match[1]) candidates.push(match[1]);
+  }
+  for (const line of upperText.split(/[\n\r]+/)) {
+    if (!OTP_KEYWORD_REGEX.test(line)) continue;
+    const digits = line.match(OTP_DIGIT_FALLBACK_REGEX);
+    if (digits) candidates.push(...digits);
+  }
+  return Array.from(new Set(candidates)).slice(0, 3);
+}
+
 const CHUNK_SIZE = 500000; // 约500KB
 
 /**
@@ -375,10 +408,10 @@ export async function saveAttachment(db: D1Database, params: SaveAttachmentParam
  * @returns 邮件列表
  */
 export async function getEmails(db: D1Database, mailboxId: string): Promise<EmailListItem[]> {
-  const results = await db.prepare(`SELECT id, mailbox_id, from_address, from_name, to_address, subject, received_at, has_attachments, is_read FROM emails WHERE mailbox_id = ? ORDER BY received_at DESC`).bind(mailboxId).all();
-  
+  const results = await db.prepare(`SELECT id, mailbox_id, from_address, from_name, to_address, subject, text_content, html_content, received_at, has_attachments, is_read FROM emails WHERE mailbox_id = ? ORDER BY received_at DESC`).bind(mailboxId).all();
+
   if (!results.results) return [];
-  
+
   return results.results.map(result => ({
     id: result.id as string,
     mailboxId: result.mailbox_id as string,
@@ -389,6 +422,11 @@ export async function getEmails(db: D1Database, mailboxId: string): Promise<Emai
     receivedAt: result.received_at as number,
     hasAttachments: !!result.has_attachments,
     isRead: !!result.is_read,
+    otpCodes: pickOtpCandidates([
+      result.subject as string || '',
+      result.text_content as string || '',
+      stripHtmlToText(result.html_content as string || ''),
+    ].join('\n')),
   }));
 }
 
