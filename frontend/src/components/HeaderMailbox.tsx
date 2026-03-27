@@ -248,7 +248,7 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
               
               <div className="relative">
                 <button
-                  onClick={handleRefreshMailbox}
+                  onClick={() => handleRefreshMailbox()}
                   className={`w-8 h-8 ${refreshButtonClass}`}
                   disabled={isActionLoading}
                   title={t('mailbox.refresh')}
@@ -299,7 +299,7 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
             <div className="flex items-center">
               <div className="relative">
                 <button
-                  onClick={handleRefreshMailbox}
+                  onClick={() => handleRefreshMailbox()}
                   className={`w-6 h-6 ${refreshButtonClass}`}
                   disabled={isActionLoading}
                   title={t('mailbox.refresh')}
