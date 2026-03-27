@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MailboxContext } from '../contexts/MailboxContext';
 import EmailDetail from './EmailDetail';
-import { pickOtpCandidates } from '../utils/otp';
+import { pickOtpCandidates, stripHtmlToText } from '../utils/otp';
 
 interface EmailListProps {
   emails: Email[];
@@ -18,7 +18,7 @@ const EmailList: React.FC<EmailListProps> = ({
   isLoading 
 }) => {
   const { t } = useTranslation();
-  const { autoRefresh, setAutoRefresh, refreshEmails, mailbox, deleteMailbox, showSuccessMessage, showErrorMessage } = useContext(MailboxContext);
+  const { autoRefresh, setAutoRefresh, refreshEmails, mailbox, deleteMailbox, showSuccessMessage, showErrorMessage, emailCache } = useContext(MailboxContext);
   const [isDeleting, setIsDeleting] = useState(false);
   
   const formatDate = (timestamp: number) => {
@@ -180,7 +180,12 @@ const EmailList: React.FC<EmailListProps> = ({
                   {email.subject || t('email.noSubject')}
                 </div>
                 {(() => {
-                  const otps = pickOtpCandidates(email.subject || '');
+                  const cached = emailCache[email.id];
+                  if (!cached) return null;
+                  const { email: cachedEmail } = cached;
+                  const textFromHtml = cachedEmail.htmlContent ? stripHtmlToText(cachedEmail.htmlContent) : '';
+                  const sourceText = [cachedEmail.subject || '', cachedEmail.textContent || '', textFromHtml].join('\n');
+                  const otps = pickOtpCandidates(sourceText);
                   if (otps.length === 0) return null;
                   return (
                     <div className="flex flex-wrap gap-1 mt-1.5" onClick={(e) => e.stopPropagation()}>
