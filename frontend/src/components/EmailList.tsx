@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MailboxContext } from '../contexts/MailboxContext';
 import EmailDetail from './EmailDetail';
+import { pickOtpCandidates } from '../utils/otp';
 
 interface EmailListProps {
   emails: Email[];
@@ -17,7 +18,7 @@ const EmailList: React.FC<EmailListProps> = ({
   isLoading 
 }) => {
   const { t } = useTranslation();
-  const { autoRefresh, setAutoRefresh, refreshEmails, mailbox, deleteMailbox } = useContext(MailboxContext);
+  const { autoRefresh, setAutoRefresh, refreshEmails, mailbox, deleteMailbox, showSuccessMessage, showErrorMessage } = useContext(MailboxContext);
   const [isDeleting, setIsDeleting] = useState(false);
   
   const formatDate = (timestamp: number) => {
@@ -163,7 +164,7 @@ const EmailList: React.FC<EmailListProps> = ({
         <ul className="divide-y">
           {emails.map((email) => (
             <React.Fragment key={email.id}>
-              <li 
+              <li
                 className={`p-4 cursor-pointer hover:bg-muted/50 ${
                   selectedEmailId === email.id ? 'bg-muted' : ''
                 } ${!email.isRead ? 'font-semibold' : ''}`}
@@ -178,6 +179,30 @@ const EmailList: React.FC<EmailListProps> = ({
                 <div className="text-sm truncate">
                   {email.subject || t('email.noSubject')}
                 </div>
+                {(() => {
+                  const otps = pickOtpCandidates(email.subject || '');
+                  if (otps.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap gap-1 mt-1.5" onClick={(e) => e.stopPropagation()}>
+                      {otps.map((code) => (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(code)
+                              .then(() => showSuccessMessage(t('email.otpCopied')))
+                              .catch(() => showErrorMessage(t('email.otpCopyFailed')));
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-xs font-mono text-primary hover:bg-primary/20"
+                          title={t('email.copyOtp')}
+                        >
+                          <i className="fas fa-key text-[10px]" />
+                          {code}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
               </li>
               {selectedEmailId === email.id && (
                 <li className="border-t border-muted">

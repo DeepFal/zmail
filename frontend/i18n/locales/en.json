@@ -95,7 +95,11 @@
     "notFound": "Email not found or has been deleted",
     "selectEmailPrompt": "Select an email to view details",
     "message": "message",
-    "messages": "messages"
+    "messages": "messages",
+    "otpTitle": "Verification Code",
+    "otpCopied": "Code copied",
+    "otpCopyFailed": "Copy failed",
+    "copyOtp": "Copy code"
   },
   "settings": {
     "language": "Language",
