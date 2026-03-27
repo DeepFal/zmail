@@ -3,6 +3,19 @@ import { initializeDatabase, cleanupExpiredMailboxes, cleanupExpiredMails, clean
 import { handleEmail } from './email-handler';
 import app from './routes';
 
+let databaseInitialization: Promise<void> | null = null;
+
+function ensureDatabaseInitialized(env: Env): Promise<void> {
+  if (!databaseInitialization) {
+    databaseInitialization = initializeDatabase(env.DB).catch((error) => {
+      databaseInitialization = null;
+      throw error;
+    });
+  }
+
+  return databaseInitialization;
+}
+
 // 导出Worker处理函数
 export default {
   // 处理HTTP请求
@@ -11,7 +24,7 @@ export default {
     
     try {
       // 自动初始化数据库（如果需要）
-      await initializeDatabase(env.DB);
+      await ensureDatabaseInitialized(env);
       
       // 手动初始化数据库（如果请求中包含init参数）
       if (url.searchParams.has('init')) {

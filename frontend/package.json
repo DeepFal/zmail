@@ -12,6 +12,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
+    "dompurify": "^3.3.3",
     "i18next": "^23.4.4",
     "i18next-browser-languagedetector": "^7.1.0",
     "react": "^18.2.0",

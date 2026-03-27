@@ -23,18 +23,30 @@ export async function handleEmail(message: any, env: Env): Promise<void> {
       attachmentsCount: email.attachments?.length || 0
     });
 
-    // 提取邮箱地址部分（从email.to获取 ）
-    const mailboxAddress = email.to[0].address.split('@')[0];
-    
-    // 查找对应的邮箱
-    const mailbox = await getMailbox(env.DB, mailboxAddress);
-    
+    const recipientAddresses = (email.to || [])
+      .map((recipient) => (recipient?.address || '').trim().toLowerCase())
+      .filter((address) => address.length > 0);
+
+    if (recipientAddresses.length === 0) {
+      throw new Error('收件地址为空');
+    }
+
+    let mailbox = null;
+    let mailboxAddress = '';
+    for (const recipientAddress of recipientAddresses) {
+      const matchedMailbox = await getMailbox(env.DB, recipientAddress);
+      if (matchedMailbox) {
+        mailbox = matchedMailbox;
+        mailboxAddress = recipientAddress;
+        break;
+      }
+    }
+
     if (!mailbox) {
       console.log('邮箱不存在');
       throw new Error('邮箱不存在');
     }
 
-    // 保存邮件
     const savedEmail = await saveEmail(env.DB, {
       mailboxId: mailbox.id,
       fromAddress: email.from.address,
@@ -46,36 +58,27 @@ export async function handleEmail(message: any, env: Env): Promise<void> {
       hasAttachments: !!email.attachments?.length,
     });
 
-    // 保存附件（如果有）
     if (email.attachments && email.attachments.length > 0) {
       console.log(`开始保存 ${email.attachments.length} 个附件`);
-      
+
       for (const attachment of email.attachments) {
-        try {
-          // 将 ArrayBuffer 转换为 Base64 字符串
-          const base64Content = arrayBufferToBase64(attachment.content);
-          
-          // 计算附件大小（字节）
-          const size = attachment.size || attachment.content.byteLength;
-          
-          // 保存附件
-          await saveAttachment(env.DB, {
-            emailId: savedEmail.id,
-            filename: attachment.filename,
-            mimeType: attachment.mimeType,
-            content: base64Content,
-            size: size
-          });
-          
-          console.log(`附件 ${attachment.filename} 保存成功`);
-        } catch (attachmentError) {
-          console.error(`保存附件 ${attachment.filename} 失败:`, attachmentError);
-          // 继续处理其他附件，不中断流程
-        }
+        const base64Content = arrayBufferToBase64(attachment.content);
+        const size = attachment.size || attachment.content.byteLength;
+
+        await saveAttachment(env.DB, {
+          emailId: savedEmail.id,
+          filename: attachment.filename,
+          mimeType: attachment.mimeType,
+          content: base64Content,
+          size: size
+        });
+
+        console.log(`附件 ${attachment.filename} 保存成功`);
       }
     }
   } catch (error) {
     console.error('处理邮件失败:', error);
+    throw error;
   }
 }
 

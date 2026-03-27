@@ -1,26 +1,26 @@
-import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import EmailList from '../components/EmailList';
 import EmailDetail from '../components/EmailDetail';
 import MailboxInfo from '../components/MailboxInfo';
-import { API_BASE_URL } from '../config';
+import { deleteMailbox as apiDeleteMailbox, getMailbox as apiGetMailbox } from '../utils/api';
 import { MailboxContext } from '../contexts/MailboxContext';
 
 const MailboxPage: React.FC = () => {
   const { address } = useParams<{ address: string }>();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { 
-    emails, 
-    isEmailsLoading, 
-    autoRefresh, 
+  const {
+    emails,
+    autoRefresh,
     setAutoRefresh,
+    setMailbox: setContextMailbox,
     // feat: 从 context 中获取全局通知函数
     showSuccessMessage,
     showErrorMessage
   } = useContext(MailboxContext);
-  
+
   const [mailbox, setMailbox] = useState<Mailbox | null>(null);
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,28 +32,23 @@ const MailboxPage: React.FC = () => {
     const fetchMailbox = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/mailboxes/${address}`);
-        
-        if (!response.ok) {
-          if (response.status === 404) {
-            // fix: 使用全局通知函数
-            showErrorMessage(t('mailbox.invalidAddress'));
-            
-            // 3秒后导航到首页
-            setTimeout(() => {
-              navigate('/');
-            }, 3000);
-            return;
-          }
-          throw new Error('Failed to fetch mailbox');
+        const result = await apiGetMailbox(address);
+
+        if (result.success && result.mailbox) {
+          setMailbox(result.mailbox);
+          setContextMailbox(result.mailbox);
+          return;
         }
-        
-        const data = await response.json();
-        if (data.success) {
-          setMailbox(data.mailbox);
-        } else {
-          throw new Error(data.error || 'Unknown error');
+
+        if (result.error === 'Mailbox not found') {
+          showErrorMessage(t('mailbox.invalidAddress'));
+          setTimeout(() => {
+            navigate('/');
+          }, 3000);
+          return;
         }
+
+        throw new Error(String(result.error || 'Failed to fetch mailbox'));
       } catch (error) {
         // fix: 使用全局通知函数
         showErrorMessage(String(error));
@@ -63,32 +58,25 @@ const MailboxPage: React.FC = () => {
     };
     
     fetchMailbox();
-  }, [address, navigate, t, showErrorMessage]);
+  }, [address, navigate, t, showErrorMessage, setContextMailbox]);
   
   // 处理删除邮箱
   const handleDeleteMailbox = async () => {
     if (!address) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/mailboxes/${address}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete mailbox');
-      }
-      
-      const data = await response.json();
-      if (data.success) {
+      const result = await apiDeleteMailbox(address);
+
+      if (result.success) {
         // fix: 使用全局通知函数
         showSuccessMessage(t('mailbox.deleteSuccess'));
-        
+
         // 2秒后导航到首页
         setTimeout(() => {
           navigate('/');
         }, 2000);
       } else {
-        throw new Error(data.error || 'Unknown error');
+        throw new Error(String(result.error || 'Unknown error'));
       }
     } catch (error) {
       // fix: 使用全局通知函数
