@@ -1,6 +1,7 @@
 import React from "react";
 import { useTranslation } from 'react-i18next';
 import Container from "../components/Container";
+import { REPOSITORY_URL } from "../config";
 
 const AboutPage: React.FC = () => {
   const { t } = useTranslation();
@@ -43,18 +44,11 @@ const AboutPage: React.FC = () => {
         <h2 className="text-xl font-semibold mt-8 mb-2">{t('about.opensource.title')}</h2>
         <p>{t('about.opensource.intro')}</p>
         <ul>
-          <li><strong>{t('about.opensource.github.title')}</strong>：<a href="https://github.com/zaunist/zmail" className="text-blue-600 hover:underline">https://github.com/zaunist/zmail</a></li>
+          <li><strong>{t('about.opensource.github.title')}</strong>：<a href={REPOSITORY_URL} className="text-blue-600 hover:underline">{REPOSITORY_URL}</a></li>
           <li><strong>{t('about.opensource.license.title')}</strong>：{t('about.opensource.license.desc')}</li>
           <li><strong>{t('about.opensource.contribute.title')}</strong>：{t('about.opensource.contribute.desc')}</li>
         </ul>
-        
-        <h2 className="text-xl font-semibold mt-8 mb-2">{t('about.contact.title')}</h2>
-        <p>{t('about.contact.intro')}</p>
-        <ul>
-          <li><strong>{t('about.contact.github.title')}</strong>：{t('about.contact.github.desc')}</li>
-          <li><strong>{t('about.contact.email.title')}</strong>：y.bz@foxmail.com</li>
-        </ul>
-        
+
         <p className="text-center mt-10">{t('about.conclusion')}</p>
       </div>
     </Container>

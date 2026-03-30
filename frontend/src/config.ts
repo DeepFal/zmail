@@ -43,6 +43,7 @@ export const DEFAULT_EMAIL_DOMAIN = EMAIL_DOMAINS[0] || 'example.com';
 
 // API地址配置
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+export const REPOSITORY_URL = 'https://github.com/DeepFal/zmail';
 
 // 其他配置
 export const DEFAULT_AUTO_REFRESH = false;

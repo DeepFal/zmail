@@ -277,17 +277,6 @@
         "desc": "Welcome to submit Pull Requests and Issues"
       }
     },
-    "contact": {
-      "title": "Contact Us",
-      "intro": "If you encounter problems during use, or have any suggestions and feedback, please contact us through the following methods:",
-      "github": {
-        "title": "GitHub Issues",
-        "desc": "Submit Issues in the project repository"
-      },
-      "email": {
-        "title": "Email"
-      }
-    },
     "conclusion": "Thank you for choosing zmail temporary email service!"
     },
   "privacy": {
@@ -336,8 +325,8 @@
       "item3": "Continued use of the service indicates your acceptance of the updated policy."
     },
     "section8": {
-      "title": "Contact Us",
-      "item1": "If you have any questions about this privacy policy, please contact us through GitHub Issues."
+      "title": "Questions & Feedback",
+      "item1": "If you have any questions about this privacy policy, please open an issue in the project repository."
     },
     "conclusion": "Thank you for trusting and using zmail temporary email service!"
   }

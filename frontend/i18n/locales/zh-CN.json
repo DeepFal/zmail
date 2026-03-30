@@ -277,17 +277,6 @@
         "desc": "欢迎提交Pull Request和Issue"
       }
     },
-    "contact": {
-      "title": "联系我们",
-      "intro": "如果您在使用过程中遇到问题，或者有任何建议和反馈，欢迎通过以下方式联系我们：",
-      "github": {
-        "title": "GitHub Issues",
-        "desc": "在项目仓库中提交Issue"
-      },
-      "email": {
-        "title": "邮箱"
-      }
-    },
     "conclusion": "感谢您选择zmail临时邮箱服务！"
     },
   "privacy": {
@@ -336,8 +325,8 @@
       "item3": "继续使用服务即表示您接受更新后的政策。"
     },
     "section8": {
-      "title": "联系我们",
-      "item1": "如果您对本隐私政策有任何疑问，请通过GitHub Issues联系我们。"
+      "title": "问题反馈",
+      "item1": "如果您对本隐私政策有任何疑问，请在项目仓库中提交 Issue。"
     },
     "conclusion": "感谢您信任并使用zmail临时邮箱服务！"
   }
