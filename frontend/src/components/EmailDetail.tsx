@@ -4,7 +4,6 @@ import DOMPurify from 'dompurify';
 import { API_BASE_URL } from '../config';
 import { getEmailAttachments, getEmailDetail, deleteEmail } from '../utils/api';
 import { MailboxContext } from '../contexts/MailboxContext';
-import { stripHtmlToText, pickOtpCandidates } from '../utils/otp';
 
 interface EmailDetailProps {
   emailId: string;
@@ -33,9 +32,10 @@ const EmailDetail: React.FC<EmailDetailProps> = ({ emailId, onClose }) => {
   useEffect(() => {
     const fetchEmail = async () => {
       try {
-        if (emailCache[emailId]) {
-          setEmail(emailCache[emailId].email);
-          setAttachments(emailCache[emailId].attachments);
+        const cachedEmailEntry = emailCache[emailId];
+        if (cachedEmailEntry && Array.isArray(cachedEmailEntry.email.otpCodes)) {
+          setEmail(cachedEmailEntry.email);
+          setAttachments(cachedEmailEntry.attachments);
           setIsLoading(false);
           return;
         }
@@ -141,15 +141,7 @@ const EmailDetail: React.FC<EmailDetailProps> = ({ emailId, onClose }) => {
     return DOMPurify.sanitize(email.htmlContent);
   }, [email]);
 
-  const otpCandidates = useMemo(() => {
-    if (!email) {
-      return [];
-    }
-
-    const textFromHtml = email.htmlContent ? stripHtmlToText(email.htmlContent) : '';
-    const sourceText = [email.subject || '', email.textContent || '', textFromHtml].join('\n');
-    return pickOtpCandidates(sourceText);
-  }, [email]);
+  const otpCandidates = email?.otpCodes ?? [];
 
   const handleCopyOtp = async (otpCode: string) => {
     try {

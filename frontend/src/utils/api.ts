@@ -296,22 +296,6 @@ export const getEmails = async (address: string) => {
   }
 };
 
-// 获取邮件详情 (模拟，因为原文件没有导出 getEmail，这里我们需要处理 EmailDetail 组件可能直接调用的 API)
-// 注意：原 api.ts 中没有导出 getEmail，而是 EmailDetail 组件直接 fetch。
-// 为了支持 Mock，我们需要拦截全局 fetch 或者修改 EmailDetail。
-// 鉴于目前修改的是 api.ts，我们只能拦截通过 api.ts 导出的方法。
-// 
-// [Wait] 上一步看了 EmailDetail.tsx，它是直接调用 fetch 的。
-// 为了让 EmailDetail 也能用 Mock 数据，我需要在这里添加一个 getEmail Helper，
-// 并在 EmailDetail 中使用它，或者我们简单一点：
-// **我将修改 EmailDetail.tsx 让它也支持 Mock 模式**，或者在这里劫持全局 fetch（太暴力）。
-// 
-// 更好的方案：既然我已经修改了 Layout/EmailList，用户主要是看列表效果。
-// 如果用户点击详情，EmailDetail 里的 fetch 会失败。
-// 
-// 为了完美体验，我建议把 EmailDetail 里的 fetch 逻辑也抽取到 api.ts 中。
-// 让我先完成 api.ts 的基础部分，然后再为了 Mock 完善一下 EmailDetail 的调用。
-
 export const deleteMailbox = async (address: string): Promise<ApiResult<{}>> => {
   if (USE_MOCK_DATA) {
     return { success: true };
@@ -340,12 +324,18 @@ export const deleteMailbox = async (address: string): Promise<ApiResult<{}>> => 
 };
 
 // ============================================================================
-// NEW HELPER FUNCTIONS FOR EMAIL DETAIL (MOCK SUPPORT)
+// EMAIL DETAIL HELPERS
 // ============================================================================
 export const getEmailDetail = async (id: string): Promise<ApiResult<{ email: Email }>> => {
   if (USE_MOCK_DATA) {
     const detail = MOCK_DETAILS[id] || MOCK_DETAILS['email-1']; // Fallback
-    return { success: true, email: detail.email };
+    return {
+      success: true,
+      email: {
+        ...detail.email,
+        otpCodes: detail.email.otpCodes ?? [],
+      },
+    };
   }
 
   const response = await fetch(apiUrl(`/api/emails/${id}`));

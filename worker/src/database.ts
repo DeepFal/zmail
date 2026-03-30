@@ -14,40 +14,7 @@ import {
   getCurrentTimestamp, 
   calculateExpiryTimestamp 
 } from './utils';
-
-const OTP_NEAR_KEYWORD_REGEX = /(?:otp|one[-\s]?time|verification(?:\s+code)?|security\s?code|passcode|验证码|校验码|动态码|动态口令|验证(?:码)?)\D{0,20}([A-Z0-9]{4,8})/gi;
-const OTP_LEADING_CODE_REGEX = /\b([A-Z0-9]{4,8})\b\D{0,20}(?:otp|verification(?:\s+code)?|security\s?code|passcode|验证码|校验码|动态码|动态口令|验证(?:码)?)/gi;
-const OTP_KEYWORD_REGEX = /(otp|one[-\s]?time|verification|verify|security\s?code|passcode|验证码|校验码|动态码|动态口令|验证)/i;
-const OTP_DIGIT_FALLBACK_REGEX = /\b\d{4,8}\b/g;
-
-function stripHtmlToText(html: string): string {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function pickOtpCandidates(sourceText: string): string[] {
-  if (!sourceText) return [];
-  const candidates: string[] = [];
-  const upperText = sourceText.toUpperCase();
-  for (const match of upperText.matchAll(OTP_NEAR_KEYWORD_REGEX)) {
-    if (match[1]) candidates.push(match[1]);
-  }
-  for (const match of upperText.matchAll(OTP_LEADING_CODE_REGEX)) {
-    if (match[1]) candidates.push(match[1]);
-  }
-  for (const line of upperText.split(/[\n\r]+/)) {
-    if (!OTP_KEYWORD_REGEX.test(line)) continue;
-    const digits = line.match(OTP_DIGIT_FALLBACK_REGEX);
-    if (digits) candidates.push(...digits);
-  }
-  return Array.from(new Set(candidates)).slice(0, 3);
-}
+import { extractOtpCodes } from './otp';
 
 const CHUNK_SIZE = 500000; // 约500KB
 
@@ -256,37 +223,6 @@ export async function cleanupReadMails(db: D1Database): Promise<number> {
 }
 
 /**
- * 清理指定邮件的所有附件
- * @param db 数据库实例
- * @param emailId 邮件ID
- */
-async function cleanupAttachments(db: D1Database, emailId: string): Promise<void> {
-  // [refactor] 利用 ON DELETE CASCADE，此函数在删除邮件时不再需要手动调用。
-  // 但保留此函数以备其他需要单独清理附件的场景。
-  try {
-    // 获取邮件的所有附件ID
-    const attachmentsResult = await db.prepare(`SELECT id FROM attachments WHERE email_id = ?`).bind(emailId).all<{ id: string }>();
-    
-    if (attachmentsResult.results && attachmentsResult.results.length > 0) {
-      const attachmentIds = attachmentsResult.results.map(row => row.id);
-      const placeholders = attachmentIds.map(() => '?').join(',');
-
-      console.log(`邮件 ${emailId} 有 ${attachmentIds.length} 个附件需要清理`);
-      
-      // 批量删除所有分块
-      await db.prepare(`DELETE FROM attachment_chunks WHERE attachment_id IN (${placeholders})`).bind(...attachmentIds).run();
-      console.log(`已清理附件的所有分块`);
-      
-      // 批量删除所有附件记录
-      await db.prepare(`DELETE FROM attachments WHERE id IN (${placeholders})`).bind(...attachmentIds).run();
-      console.log(`已清理邮件 ${emailId} 的所有附件`);
-    }
-  } catch (error) {
-    console.error(`清理邮件 ${emailId} 的附件时出错:`, error);
-  }
-}
-
-/**
  * 保存邮件
  * @param db 数据库实例
  * @param params 参数
@@ -422,11 +358,11 @@ export async function getEmails(db: D1Database, mailboxId: string): Promise<Emai
     receivedAt: result.received_at as number,
     hasAttachments: !!result.has_attachments,
     isRead: !!result.is_read,
-    otpCodes: pickOtpCandidates([
+    otpCodes: extractOtpCodes(
       result.subject as string || '',
       result.text_content as string || '',
-      stripHtmlToText(result.html_content as string || ''),
-    ].join('\n')),
+      result.html_content as string || '',
+    ),
   }));
 }
 
@@ -456,6 +392,11 @@ export async function getEmail(db: D1Database, id: string): Promise<Email | null
     receivedAt: result.received_at as number,
     hasAttachments: !!result.has_attachments,
     isRead: true,
+    otpCodes: extractOtpCodes(
+      result.subject as string || '',
+      result.text_content as string || '',
+      result.html_content as string || '',
+    ),
   };
 }
 

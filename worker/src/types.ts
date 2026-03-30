@@ -36,6 +36,7 @@ export interface Email {
   receivedAt: number;
   hasAttachments: boolean;
   isRead: boolean;
+  otpCodes?: string[];
 }
 
 // 保存邮件参数
