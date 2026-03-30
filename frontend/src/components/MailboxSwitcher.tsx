@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from 'react'; // feat:
 import { useTranslation } from 'react-i18next';
 import { deleteMailbox as apiDeleteMailbox } from '../utils/api';
 import { MailboxContext } from '../contexts/MailboxContext'; // feat: 导入 MailboxContext
+import { getMailboxAddressParts } from '../utils/mailboxAddress';
 
 interface MailboxSwitcherProps {
   currentMailbox: Mailbox;
@@ -204,7 +205,7 @@ const MailboxSwitcher: React.FC<MailboxSwitcherProps> = ({
                     m.address === currentMailbox.address ? 'bg-primary/10 text-primary font-medium' : ''
                   }`}
                 >
-                  {m.address}@{domain}
+                  {getMailboxAddressParts(m.address, domain).fullAddress}
                 </button>
                 {m.address !== currentMailbox.address && (
                   <button

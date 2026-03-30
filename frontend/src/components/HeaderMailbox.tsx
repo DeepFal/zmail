@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createRandomMailbox, createCustomMailbox } from '../utils/api';
+import { getMailboxAddressParts } from '../utils/mailboxAddress';
 import MailboxSwitcher from './MailboxSwitcher';
 import { MailboxContext } from '../contexts/MailboxContext';
 
@@ -28,17 +29,22 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [customAddressError, setCustomAddressError] = useState<string | null>(null);
   const refreshSeqRef = useRef(0);
+  const fallbackDomain = (domain || domains[0] || '').trim();
 
   useEffect(() => {
-    setSelectedDomain(domain);
-  }, [domain]);
+    if (!mailbox) return;
+
+    const nextDomain = getMailboxAddressParts(mailbox.address, fallbackDomain).domain || fallbackDomain;
+    setSelectedDomain((currentDomain) => currentDomain === nextDomain ? currentDomain : nextDomain);
+  }, [mailbox, fallbackDomain]);
   
   if (!mailbox || isLoading) return null;
+
+  const currentMailboxAddress = getMailboxAddressParts(mailbox.address, selectedDomain || fallbackDomain);
   
   // 复制邮箱地址到剪贴板
   const copyToClipboard = () => {
-    const fullAddress = mailbox.address.includes('@') ? mailbox.address : `${mailbox.address}@${selectedDomain}`;
-    navigator.clipboard.writeText(fullAddress)
+    navigator.clipboard.writeText(currentMailboxAddress.fullAddress)
       .then(() => {
         // feat: 使用全局通知替换 Tooltip
         showSuccessMessage(t('mailbox.copySuccess'));
@@ -114,15 +120,14 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
   
   // 移动设备上的邮箱地址显示
   const renderMobileAddress = () => {
-    const fullAddress = mailbox.address.includes('@') ? mailbox.address : `${mailbox.address}@${selectedDomain}`;
-    const [username, domainPart] = fullAddress.split('@');
+    const { localPart, domain } = currentMailboxAddress;
     
     // 如果用户名太长，截断显示
-    const displayUsername = username.length > 10 ? `${username.substring(0, 8)}...` : username;
+    const displayUsername = localPart.length > 10 ? `${localPart.substring(0, 8)}...` : localPart;
     
     return (
       <code className="bg-muted px-2 py-1 rounded text-xs font-medium truncate max-w-[120px]">
-        {displayUsername}@{domainPart}
+        {displayUsername}@{domain}
       </code>
     );
   };
@@ -210,7 +215,7 @@ const HeaderMailbox: React.FC<HeaderMailboxProps> = ({
             {/* 电脑端邮箱地址显示 */}
             <div className="hidden sm:flex items-center">
               <code className="bg-muted px-2 py-1 rounded text-sm font-medium flex items-center">
-                {mailbox.address}@
+                {currentMailboxAddress.localPart}@
                 {/* [fix]: 为select包裹一个relative容器，用于绝对定位自定义箭头 */}
                 <div className="relative">
                   <select 
